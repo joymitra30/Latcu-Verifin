@@ -1,0 +1,366 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkShip Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f5f6fa;
+            color: #333;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1100;
+        }
+
+            .navbar h1 {
+                font-size: 22px;
+                font-weight: bold;
+                color: #007bff;
+            }
+
+        .dropdown {
+            position: relative;
+        }
+
+        .dropbtn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: #fff;
+            min-width: 140px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 1200;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+            .dropdown-content a {
+                color: #333;
+                padding: 10px 14px;
+                display: block;
+                text-decoration: none;
+            }
+
+                .dropdown-content a:hover {
+                    background: #f5f5f5;
+                }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 250px;
+            height: calc(100% - 60px);
+            background: #ffffff;
+            border-right: 1px solid #ddd;
+            padding-top: 10px;
+            overflow-y: auto;
+        }
+
+            .sidebar ul {
+                list-style: none;
+            }
+
+            .sidebar li {
+                padding: 12px 18px;
+                cursor: pointer;
+                font-size: 15px;
+                position: relative;
+                transition: all 0.3s ease;
+                border-radius: 6px;
+                margin: 2px 8px;
+            }
+
+                .sidebar li:hover {
+                    background: #f0f7ff;
+                    color: #007bff;
+                }
+
+                .sidebar li.active {
+                    background: #007bff;
+                    color: #fff;
+                }
+
+        /* Submenu styling */
+        .submenu {
+            display: none;
+            margin-top: 4px;
+            margin-left: 10px;
+            border-left: 2px solid #e0e0e0;
+            padding-left: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+            .submenu li {
+                padding: 8px 14px;
+                font-size: 13.5px; /* reduced size */
+                border-radius: 4px;
+                margin: 2px 0;
+            }
+
+                .submenu li:hover {
+                    background: #f8faff;
+                    color: #007bff;
+                }
+
+            /* Nested submenu */
+            .submenu .submenu {
+                margin-left: 15px;
+                border-left: 1px dashed #ccc;
+                padding-left: 10px;
+                font-size: 12px; /* smaller size for deeper menu */
+            }
+
+        /* Arrow indicators */
+        .has-children:has(> .submenu)::after {
+            content: "▸";
+            position: absolute;
+            right: 14px;
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .open:has(> .submenu)::after {
+            transform: rotate(90deg);
+        }
+
+        .open > .submenu {
+            display: block;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Content */
+        .main-content {
+            margin-left: 260px;
+            margin-top: 60px;
+            padding: 20px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+            .card h3 {
+                margin-bottom: 10px;
+                font-size: 18px;
+                color: #007bff;
+            }
+
+            .card .value {
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: #28a745;
+            }
+
+            .card button {
+                margin-top: 8px;
+                padding: 6px 12px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                background: #007bff;
+                color: #fff;
+            }
+
+                .card button:hover {
+                    background: #0056b3;
+                }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="navbar">
+        <h1>Dashboard</h1>
+        <div class="dropdown">
+            <button class="dropbtn">👤 Admin ▼</button>
+            <div class="dropdown-content">
+                <a href="#">Profile</a>
+                <a href="#" id="logoutBtn">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <ul>
+            <li class="active">📊 Dashboard</li>
+
+            <!-- Reports -->
+            <li class="has-children">
+                📑 Reports
+                <ul class="submenu">
+                    <li class="has-children">
+                        Accounting
+                        <ul class="submenu">
+                            <li>Trial Balance</li>
+                            <li>Trial Balance Comparison</li>
+                            <li>Income Statement</li>
+                            <li>Balance Sheet Comparisons</li>
+                            <li>Balance Sheet</li>
+                            <li>Cash Flow</li>
+                            <li>Owner's Equity Summary</li>
+                            <li>Detailed Owner's Equity</li>
+                            <li>General Ledger</li>
+                            <li>Budget Comparison</li>
+                            <li>Cash Book</li>
+                        </ul>
+                    </li>
+                    <li class="has-children">
+                        Inventory
+                        <ul class="submenu">
+                            <li>Supplier Performance Report</li>
+                            <li>Out of Stock Report</li>
+                            <li>Reorder Report</li>
+                            <li>Stock Aging Report</li>
+                            <li>Stock Taking Report</li>
+                        </ul>
+                    </li>
+                    <li class="has-children">
+                        Assets
+                        <ul class="submenu">
+                            <li>Asset Registry Report</li>
+                        </ul>
+                    </li>
+                    <li class="has-children">
+                        Recruitment
+                        <ul class="submenu">
+                            <li>Application Source Report</li>
+                            <li>Offers Report</li>
+                            <li>Interview Activities Report</li>
+                            <li>Application Pipeline Report</li>
+                            <li>Recruitment Summary Report</li>
+                        </ul>
+                    </li>
+                    <li class="has-children">
+                        Human Resource
+                        <ul class="submenu">
+                            <li>Employee Master List</li>
+                            <li>Late Coming & Early Leaving Report</li>
+                            <li>Absenteeism Report</li>
+                            <li>Overtime Report</li>
+                            <li>Leave Balance Report</li>
+                            <li>Leave Usage Report</li>
+                            <li>Upcoming Leave Schedule</li>
+                            <li>Leave Approval Cycle Report</li>
+                            <li>Payslip Summary Report</li>
+                            <li>Statutory Deductions Report</li>
+                            <li>Training Attendance Report</li>
+                            <li>Appraisal Summary Report</li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+
+            <!-- Other Menus -->
+            <li>🏬 Inventory</li>
+            <li>⚙️ Configurations</li>
+            <li>🧾 Requisitions</li>
+            <li>💰 Accounts</li>
+            <li>📦 Procurement</li>
+            <li>👥 HR</li>
+            <li>🏭 Manufacturing</li>
+            <li>⚙️ Settings</li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="cards">
+            <div class="card">
+                <h3>Profit & Loss</h3>
+                <div class="value">19156.67</div>
+                <p>Revenue Growth: <strong>19.09%</strong></p>
+            </div>
+            <div class="card">
+                <h3>Expenses</h3>
+                <div class="value">0</div>
+            </div>
+            <div class="card">
+                <h3>Cash Ledgers</h3>
+                <p>💵 Cash at Hand: <strong>60,000</strong></p>
+                <p>🏦 Cash at Bank: <strong>48,000</strong></p>
+                <p>📱 Mobile Money: <strong>138,500</strong></p>
+                <button>Manage Ledgers</button>
+                <button>View Transactions</button>
+            </div>
+            <div class="card">
+                <h3>Sales Trend</h3>
+                <div class="chart">[Chart Placeholder]</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Logout
+        document.getElementById("logoutBtn").addEventListener("click", function () {
+            alert("Logging out...");
+            window.location.href = "index.html";
+        });
+
+        // Sidebar toggle for all nested menus
+        document.querySelectorAll(".has-children").forEach(item => {
+            item.addEventListener("click", function (e) {
+                e.stopPropagation();
+                this.classList.toggle("open");
+            });
+        });
+    </script>
+</body>
+</html>
