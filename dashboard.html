@@ -1,365 +1,952 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ThinkShip Dashboard</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ThinkShip ERP Dashboard</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #f5f6fa;
-            color: #333;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh; display: flex; overflow-x: hidden;
         }
-
-        /* Navbar */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            background: #fff;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            z-index: 1100;
-        }
-
-            .navbar h1 {
-                font-size: 22px;
-                font-weight: bold;
-                color: #007bff;
-            }
-
-        .dropdown {
-            position: relative;
-        }
-
-        .dropbtn {
-            background: none;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            top: 100%;
-            background: #fff;
-            min-width: 140px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            z-index: 1200;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-            .dropdown-content a {
-                color: #333;
-                padding: 10px 14px;
-                display: block;
-                text-decoration: none;
-            }
-
-                .dropdown-content a:hover {
-                    background: #f5f5f5;
-                }
-
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-
         /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            width: 250px;
-            height: calc(100% - 60px);
-            background: #ffffff;
-            border-right: 1px solid #ddd;
-            padding-top: 10px;
-            overflow-y: auto;
+        .sidebar { width: 280px; background: rgba(255,255,255,.95); backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(99,102,241,.1); height: 100vh; overflow-y: auto;
+            transition: width .3s ease; box-shadow: 4px 0 20px rgba(0,0,0,.05); position: relative; z-index: 100; }
+        .sidebar.collapsed { width: 80px; }
+        .sidebar-header { padding: 24px 20px; border-bottom: 1px solid rgba(99,102,241,.1); display: flex; align-items: center; gap: 12px; }
+        .logo-small { width: 40px; height: 40px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; font-weight:700; flex-shrink:0; }
+        .company-name { font-size:20px; font-weight:700; color:#1f2937; white-space:nowrap; opacity:1; transition: opacity .3s; }
+        .sidebar.collapsed .company-name { opacity:0; pointer-events:none; }
+        .menu-section { padding: 8px 0; }
+        .menu-item { position: relative; }
+        .menu-toggle-btn { display:flex; align-items:center; width:100%; padding:12px 20px; background:none; border:none; color:#374151; font-weight:500; font-size:14px; cursor:pointer; transition: background .2s, color .2s; text-align:left; }
+        .menu-toggle-btn:hover, .menu-toggle-btn:focus-visible { background: rgba(99,102,241,.08); color:#6366f1; outline: none; }
+        .menu-toggle-btn.active { background: linear-gradient(90deg, rgba(99,102,241,.1), transparent); color:#6366f1; border-right:3px solid #6366f1; }
+        .menu-icon { width:20px; margin-right:12px; font-size:16px; flex-shrink:0; }
+        .menu-text { flex:1; white-space:nowrap; opacity:1; transition: opacity .3s; }
+        .sidebar.collapsed .menu-text { opacity:0; pointer-events:none; }
+        .menu-arrow { font-size:12px; transition: transform .3s ease; opacity:1; }
+        .sidebar.collapsed .menu-arrow { opacity:0; pointer-events:none; }
+        .menu-item.open .menu-arrow { transform: rotate(90deg); }
+        .submenu { background: rgba(99,102,241,.02); overflow: hidden; transition: max-height .3s ease, opacity .2s ease; max-height: 0; opacity: 0; }
+        .menu-item.open .submenu { opacity: 1; }
+        .submenu-item, .subsubmenu-item { color:#6b7280; cursor:pointer; font-size:13px; transition: background .2s, color .2s, transform .2s; display:block; }
+        .submenu-item { padding:10px 20px 10px 40px; }
+        .submenu-item:hover, .subsubmenu-item:hover, .submenu-toggle:hover,
+        .submenu-item:focus-visible, .subsubmenu-item:focus-visible, .submenu-toggle:focus-visible { background: rgba(99,102,241,.05); color:#6366f1; transform: translateX(4px); outline: none; }
+        .submenu-item.active, .subsubmenu-item.active, .submenu-toggle.active { color:#6366f1; background: rgba(99,102,241,.1); }
+        /* Sub-submenu */
+        .submenu-toggle { display:flex; align-items:center; justify-content:space-between; width:100%; padding:10px 20px 10px 40px; background:none; border:none; color:#6b7280; font-size:13px; cursor:pointer; transition: background .2s, color .2s, transform .2s; text-align:left; }
+        .submenu-arrow { font-size:10px; transition: transform .3s ease; margin-left:8px; }
+        .submenu-item.open .submenu-arrow { transform: rotate(90deg); }
+        .subsubmenu { background: rgba(99,102,241,.04); overflow:hidden; transition: max-height .3s ease, opacity .2s ease; max-height:0; opacity:0; }
+        .submenu-item.open .subsubmenu { opacity:1; }
+        .subsubmenu-item { padding:8px 20px 8px 60px; }
+        /* Main Content */
+        .main-content { flex:1; display:flex; flex-direction:column; min-width:0; }
+        .topbar { background: rgba(255,255,255,.95); backdrop-filter: blur(20px); padding:16px 32px; border-bottom:1px solid rgba(99,102,241,.1); display:flex; align-items:center; gap:20px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+        .hamburger { background:none; border:none; font-size:20px; cursor:pointer; color:#374151; padding:8px; border-radius:8px; transition: background .2s, color .2s; }
+        .hamburger:hover, .hamburger:focus-visible { background: rgba(99,102,241,.1); color:#6366f1; outline:none; }
+        .page-title { font-size:28px; font-weight:700; color:#1f2937; flex:1; }
+        .topbar-actions { display:flex; align-items:center; gap:16px; }
+        .language-toggle { display:flex; background: rgba(99,102,241,.1); border-radius:8px; padding:4px; }
+        .lang-btn { padding:6px 12px; border:none; background:transparent; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px; transition: background .2s, color .2s; color:#6b7280; }
+        .lang-btn.active { background:#fff; color:#6366f1; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+        .logout-btn { padding:8px 16px; background: linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; transition: transform .3s, box-shadow .3s; font-size:14px; }
+        .logout-btn:hover, .logout-btn:focus-visible { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,.3); outline:none; }
+        .dashboard-content { flex:1; padding:32px; overflow-y:auto; }
+        .welcome-card { background: linear-gradient(135deg, #6366f1, #8b5cf6); color:#fff; padding:32px; border-radius:16px; margin-bottom:32px; box-shadow: 0 10px 40px rgba(99,102,241,.2); }
+        .welcome-title { font-size:28px; font-weight:700; margin-bottom:8px; }
+        .welcome-subtitle { font-size:16px; opacity:.9; }
+        .stats-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap:24px; margin-bottom:32px; }
+        .stat-card { background:#fff; padding:24px; border-radius:16px; box-shadow: 0 4px 20px rgba(0,0,0,.08); border:1px solid rgba(99,102,241,.1); transition: transform .3s; }
+        .stat-card:hover { transform: translateY(-4px); }
+        .stat-header { display:flex; align-items:center; margin-bottom:16px; }
+        .stat-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-right:16px; }
+        .stat-value { font-size:32px; font-weight:700; color:#1f2937; margin-bottom:4px; }
+        .stat-label { color:#6b7280; font-weight:500; font-size:14px; }
+        /* Mobile Sidebar Overlay */
+        .sidebar-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,.5); z-index:99; opacity:0; visibility:hidden; transition: opacity .3s ease, visibility .3s ease; }
+        .sidebar-overlay.show { opacity:1; visibility:visible; }
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: -100%; z-index: 100; transition: left .3s ease; width: 280px; }
+            .sidebar.show { left: 0; }
+            .main-content { width: 100%; }
+            .dashboard-content { padding: 20px; }
+            .topbar { padding: 16px 20px; }
+            .page-title { font-size: 22px; }
+            .stats-grid { grid-template-columns: 1fr; gap: 16px; }
         }
-
-            .sidebar ul {
-                list-style: none;
-            }
-
-            .sidebar li {
-                padding: 12px 18px;
-                cursor: pointer;
-                font-size: 15px;
-                position: relative;
-                transition: all 0.3s ease;
-                border-radius: 6px;
-                margin: 2px 8px;
-            }
-
-                .sidebar li:hover {
-                    background: #f0f7ff;
-                    color: #007bff;
-                }
-
-                .sidebar li.active {
-                    background: #007bff;
-                    color: #fff;
-                }
-
-        /* Submenu styling */
-        .submenu {
-            display: none;
-            margin-top: 4px;
-            margin-left: 10px;
-            border-left: 2px solid #e0e0e0;
-            padding-left: 10px;
-            animation: fadeIn 0.3s ease;
-        }
-
-            .submenu li {
-                padding: 8px 14px;
-                font-size: 13.5px; /* reduced size */
-                border-radius: 4px;
-                margin: 2px 0;
-            }
-
-                .submenu li:hover {
-                    background: #f8faff;
-                    color: #007bff;
-                }
-
-            /* Nested submenu */
-            .submenu .submenu {
-                margin-left: 15px;
-                border-left: 1px dashed #ccc;
-                padding-left: 10px;
-                font-size: 12px; /* smaller size for deeper menu */
-            }
-
-        /* Arrow indicators */
-        .has-children:has(> .submenu)::after {
-            content: "▸";
-            position: absolute;
-            right: 14px;
-            font-size: 12px;
-            transition: transform 0.3s;
-        }
-
-        .open:has(> .submenu)::after {
-            transform: rotate(90deg);
-        }
-
-        .open > .submenu {
-            display: block;
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Content */
-        .main-content {
-            margin-left: 260px;
-            margin-top: 60px;
-            padding: 20px;
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
-
-            .card h3 {
-                margin-bottom: 10px;
-                font-size: 18px;
-                color: #007bff;
-            }
-
-            .card .value {
-                font-size: 1.5rem;
-                font-weight: bold;
-                color: #28a745;
-            }
-
-            .card button {
-                margin-top: 8px;
-                padding: 6px 12px;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                background: #007bff;
-                color: #fff;
-            }
-
-                .card button:hover {
-                    background: #0056b3;
-                }
+        /* Tooltip for collapsed sidebar */
+        .menu-tooltip { position:absolute; left:70px; top:50%; transform: translateY(-50%); background:#374151; color:#fff; padding:8px 12px; border-radius:6px; font-size:12px; white-space:nowrap; opacity:0; visibility:hidden; transition: opacity .3s ease, visibility .3s ease; z-index:1000; pointer-events:none; }
+        .menu-tooltip::before { content:''; position:absolute; left:-4px; top:50%; transform: translateY(-50%); width:0; height:0; border-top:4px solid transparent; border-bottom:4px solid transparent; border-right:4px solid #374151; }
+        .sidebar.collapsed .menu-toggle-btn:hover .menu-tooltip { opacity:1; visibility:visible; }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <div class="navbar">
-        <h1>Dashboard</h1>
-        <div class="dropdown">
-            <button class="dropbtn">👤 Admin ▼</button>
-            <div class="dropdown-content">
-                <a href="#">Profile</a>
-                <a href="#" id="logoutBtn">Logout</a>
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar" role="navigation" aria-label="Primary">
+        <div class="sidebar-header">
+            <div class="logo-small" aria-hidden="true">TS</div>
+            <div class="company-name">ThinkShip ERP</div>
+        </div>
+        <div class="menu-section" id="menuSection">
+            <!-- Reports -->
+            <div class="menu-item">
+    <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+        <span class="menu-icon" aria-hidden="true">📊</span>
+        <span class="menu-text" data-i18n="menu.reports">Reports</span>
+        <span class="menu-arrow" aria-hidden="true">▶</span>
+        <div class="menu-tooltip" data-i18n="menu.reports">Reports</div>
+    </button>
+    <div class="submenu">
+        <div class="submenu-item">
+            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                <span data-i18n="submenu.accounting">Accounting</span>
+                <span class="submenu-arrow" aria-hidden="true">▶</span>
+            </button>
+            <div class="subsubmenu">
+                <div class="subsubmenu-item" data-i18n="subsubmenu.quotations" onclick="loadPage(this, 'Quotations')">Quotations</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.salesOrders" onclick="loadPage(this, 'Sales Orders')">Sales Orders</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.deliveryNotes" onclick="loadPage(this, 'Delivery Notes')">Delivery Notes</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.invoices" onclick="loadPage(this, 'Invoices')">Invoices</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.trialBalance" onclick="loadPage(this, 'Trial Balance')">Trial Balance</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.trialBalanceComparison" onclick="loadPage(this, 'Trial Balance Comparison')">Trial Balance Comparison</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.incomeStatement" onclick="loadPage(this, 'Income Statement')">Income Statement</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.balanceSheet" onclick="loadPage(this, 'Balance Sheet')">Balance Sheet</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.balanceSheetComparison" onclick="loadPage(this, 'Balance Sheet Comparison')">Balance Sheet Comparison</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.ownersEquitySummary" onclick="loadPage(this, 'Owner\'s Equity Summary')">Owner's Equity Summary</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.generalLedger" onclick="loadPage(this, 'General Ledger')">General Ledger</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.cashBook" onclick="loadPage(this, 'Cash Book')">Cash Book</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.cashFlow" onclick="loadPage(this, 'Cash Flow')">Cash Flow</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.detailedOwnersEquity" onclick="loadPage(this, 'Detailed Owner\'s Equity')">Detailed Owner's Equity</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.budgetComparison" onclick="loadPage(this, 'Budget Comparison')">Budget Comparison</div>
+            </div>
+        </div>
+
+        <div class="submenu-item">
+            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                <span data-i18n="submenu.customers">Customers</span>
+                <span class="submenu-arrow" aria-hidden="true">▶</span>
+            </button>
+            <div class="subsubmenu">
+                <div class="subsubmenu-item" data-i18n="subsubmenu.customerManagement" onclick="loadPage(this, 'Customer Management')">Customer Management</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.customerGroups" onclick="loadPage(this, 'Customer Groups')">Customer Groups</div>
+            </div>
+        </div>
+
+        <div class="submenu-item">
+            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                <span data-i18n="submenu.inventory">Inventory</span>
+                <span class="submenu-arrow" aria-hidden="true">▶</span>
+            </button>
+            <div class="subsubmenu">
+                <div class="subsubmenu-item" data-i18n="subsubmenu.supplierPerformance" onclick="loadPage(this, 'Supplier Performance Report')">Supplier Performance Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.reorderReport" onclick="loadPage(this, 'Reorder Report')">Reorder Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.stockTaking" onclick="loadPage(this, 'Stock Taking Report')">Stock Taking Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.outOfStock" onclick="loadPage(this, 'Out of Stock Report')">Out of Stock Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.stockAging" onclick="loadPage(this, 'Stock Aging Report')">Stock Aging Report</div>
+            </div>
+        </div>
+
+        <div class="submenu-item">
+            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                <span data-i18n="submenu.assets">Assets</span>
+                <span class="submenu-arrow" aria-hidden="true">▶</span>
+            </button>
+            <div class="subsubmenu">
+                <div class="subsubmenu-item" data-i18n="subsubmenu.assetRegistry" onclick="loadPage(this, 'Asset Registry Report')">Asset Registry Report</div>
+            </div>
+        </div>
+
+        <div class="submenu-item">
+            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                <span data-i18n="submenu.recruitment">Recruitment</span>
+                <span class="submenu-arrow" aria-hidden="true">▶</span>
+            </button>
+            <div class="subsubmenu">
+                <div class="subsubmenu-item" data-i18n="subsubmenu.applicationSource" onclick="loadPage(this, 'Application Source Report')">Application Source Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.interviewActivities" onclick="loadPage(this, 'Interview Activities Report')">Interview Activities Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.recruitmentSummary" onclick="loadPage(this, 'Recruitment Summary Report')">Recruitment Summary Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.offersReport" onclick="loadPage(this, 'Offers Report')">Offers Report</div>
+                <div class="subsubmenu-item" data-i18n="subsubmenu.applicationPipeline" onclick="loadPage(this, 'Application Pipeline Report')">Application Pipeline Report</div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <ul>
-            <li class="active">📊 Dashboard</li>
 
-            <!-- Reports -->
-            <li class="has-children">
-                📑 Reports
-                <ul class="submenu">
-                    <li class="has-children">
-                        Accounting
-                        <ul class="submenu">
-                            <li>Trial Balance</li>
-                            <li>Trial Balance Comparison</li>
-                            <li>Income Statement</li>
-                            <li>Balance Sheet Comparisons</li>
-                            <li>Balance Sheet</li>
-                            <li>Cash Flow</li>
-                            <li>Owner's Equity Summary</li>
-                            <li>Detailed Owner's Equity</li>
-                            <li>General Ledger</li>
-                            <li>Budget Comparison</li>
-                            <li>Cash Book</li>
-                        </ul>
-                    </li>
-                    <li class="has-children">
-                        Inventory
-                        <ul class="submenu">
-                            <li>Supplier Performance Report</li>
-                            <li>Out of Stock Report</li>
-                            <li>Reorder Report</li>
-                            <li>Stock Aging Report</li>
-                            <li>Stock Taking Report</li>
-                        </ul>
-                    </li>
-                    <li class="has-children">
-                        Assets
-                        <ul class="submenu">
-                            <li>Asset Registry Report</li>
-                        </ul>
-                    </li>
-                    <li class="has-children">
-                        Recruitment
-                        <ul class="submenu">
-                            <li>Application Source Report</li>
-                            <li>Offers Report</li>
-                            <li>Interview Activities Report</li>
-                            <li>Application Pipeline Report</li>
-                            <li>Recruitment Summary Report</li>
-                        </ul>
-                    </li>
-                    <li class="has-children">
-                        Human Resource
-                        <ul class="submenu">
-                            <li>Employee Master List</li>
-                            <li>Late Coming & Early Leaving Report</li>
-                            <li>Absenteeism Report</li>
-                            <li>Overtime Report</li>
-                            <li>Leave Balance Report</li>
-                            <li>Leave Usage Report</li>
-                            <li>Upcoming Leave Schedule</li>
-                            <li>Leave Approval Cycle Report</li>
-                            <li>Payslip Summary Report</li>
-                            <li>Statutory Deductions Report</li>
-                            <li>Training Attendance Report</li>
-                            <li>Appraisal Summary Report</li>
-                        </ul>
-                    </li>
-                </ul>
-            </li>
+            <!-- Inventory -->
+            <div class="menu-item">
+                <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                    <span class="menu-icon" aria-hidden="true">📦</span>
+                    <span class="menu-text" data-i18n="menu.inventory">Inventory</span>
+                    <span class="menu-arrow" aria-hidden="true">▶</span>
+                    <div class="menu-tooltip" data-i18n="menu.inventory">Inventory</div>
+                </button>
+                <div class="submenu">
+                    <div class="submenu-item" onclick="loadPage(this, 'Inventory Summary')" data-i18n="submenu.inventory.summary">Summary</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Point of Sale')" data-i18n="submenu.inventory.pos">Point of Sale</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Stock In')" data-i18n="submenu.inventory.stock_in">Stock In</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Stock Out')" data-i18n="submenu.inventory.stock_out">Stock Out</div>
+                    <div class="submenu-item">
+                        <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                            <span data-i18n="submenu.inventory.configurations">Configurations</span>
+                            <span class="submenu-arrow" aria-hidden="true">▶</span>
+                        </button>
+                        <div class="subsubmenu">
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Stores')" data-i18n="subsubmenu.inventory.stores">Stores</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Suppliers')" data-i18n="subsubmenu.inventory.suppliers">Suppliers</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Trucks')" data-i18n="subsubmenu.inventory.trucks">Trucks</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Drivers')" data-i18n="subsubmenu.inventory.drivers">Drivers</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Item Categories')" data-i18n="subsubmenu.inventory.item_categories">Item Categories</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Items')" data-i18n="subsubmenu.inventory.items">Items</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Units of Measurements')" data-i18n="subsubmenu.inventory.units">Units of Measurements</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <!-- Other Menus -->
-            <li>🏬 Inventory</li>
-            <li>⚙️ Configurations</li>
-            <li>🧾 Requisitions</li>
-            <li>💰 Accounts</li>
-            <li>📦 Procurement</li>
-            <li>👥 HR</li>
-            <li>🏭 Manufacturing</li>
-            <li>⚙️ Settings</li>
-        </ul>
-    </aside>
+            <!-- Requisitions -->
+            <div class="menu-item">
+                <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                    <span class="menu-icon" aria-hidden="true">📋</span>
+                    <span class="menu-text" data-i18n="menu.requisitions">Requisitions</span>
+                    <span class="menu-arrow" aria-hidden="true">▶</span>
+                    <div class="menu-tooltip" data-i18n="menu.requisitions">Requisitions</div>
+                </button>
+                <div class="submenu">
+                    <div class="submenu-item" onclick="loadPage(this, 'Expense Requisitions')" data-i18n="submenu.requisitions.expense">Expense Requisitions</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Fuel Requisitions')" data-i18n="submenu.requisitions.fuel">Fuel Requisitions</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Store Requisitions')" data-i18n="submenu.requisitions.store">Store Requisitions</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Cash Requisitions Details')" data-i18n="submenu.requisitions.cash">Cash Requisitions Details</div>
+                </div>
+            </div>
+
+            <!-- Accounts -->
+            <div class="menu-item">
+                <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                    <span class="menu-icon" aria-hidden="true">💰</span>
+                    <span class="menu-text" data-i18n="menu.accounts">Accounts</span>
+                    <span class="menu-arrow" aria-hidden="true">▶</span>
+                    <div class="menu-tooltip" data-i18n="menu.accounts">Accounts</div>
+                </button>
+                <div class="submenu">
+                    <div class="submenu-item" onclick="loadPage(this, 'Expense Transactions')" data-i18n="submenu.expenseTransactions">Expense Transactions</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Income Transactions')" data-i18n="submenu.incomeTransactions">Income Transactions</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Internal Cash Transfer')" data-i18n="submenu.internalCashTransfer">Internal Cash Transfer</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Other Transactions')" data-i18n="submenu.otherTransactions">Other Transactions</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Chart of Accounts')" data-i18n="submenu.chartOfAccounts">Chart of Accounts</div>
+                    <div class="submenu-item">
+                        <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                            <span data-i18n="submenu.configurations">Configurations</span>
+                            <span class="submenu-arrow" aria-hidden="true">▶</span>
+                        </button>
+                        <div class="subsubmenu">
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Categories')" data-i18n="subsubmenu.categories">Categories</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Sub Categories')" data-i18n="subsubmenu.subCategories">Sub Categories</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Fiscal Years')" data-i18n="subsubmenu.fiscalYears">Fiscal Years</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Currencies')" data-i18n="subsubmenu.currencies">Currencies</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Payment Methods')" data-i18n="subsubmenu.paymentMethods">Payment Methods</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budgets -->
+            <div class="menu-item">
+                <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                    <span class="menu-icon" aria-hidden="true">📈</span>
+                    <span class="menu-text" data-i18n="menu.budgets">Budgets</span>
+                    <span class="menu-arrow" aria-hidden="true">▶</span>
+                    <div class="menu-tooltip" data-i18n="menu.budgets">Budgets</div>
+                </button>
+                <div class="submenu">
+                    <div class="submenu-item" onclick="loadPage(this, 'Budgets')" data-i18n="submenu.budgets">Budgets</div>
+                    <div class="submenu-item" onclick="loadPage(this, 'Budget Categories')" data-i18n="submenu.budgetCategories">Budget Categories</div>
+                </div>
+            </div>
+
+            <!-- Procurement -->
+            <div class="menu-item">
+                <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                    <span class="menu-icon" aria-hidden="true">🛒</span>
+                    <span class="menu-text" data-i18n="menu.procurement">Procurement</span>
+                    <span class="menu-arrow" aria-hidden="true">▶</span>
+                    <div class="menu-tooltip" data-i18n="menu.procurement">Procurement</div>
+                </button>
+                <div class="submenu">
+                    <div class="submenu-item">
+                        <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                            <span data-i18n="submenu.procurement.configurations">Configurations</span>
+                            <span class="submenu-arrow" aria-hidden="true">▶</span>
+                        </button>
+                        <div class="subsubmenu">
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Procurement Types')" data-i18n="subsubmenu.procurement.types">Procurement Types</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Services')" data-i18n="subsubmenu.procurement.services">Services</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Purchase Requests')" data-i18n="subsubmenu.procurement.requests">Purchase Requests</div>
+                        </div>
+                    </div>
+                    <div class="submenu-item">
+                        <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                            <span data-i18n="submenu.procurement.operations">General Operations</span>
+                            <span class="submenu-arrow" aria-hidden="true">▶</span>
+                        </button>
+                        <div class="subsubmenu">
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Requests for Quotation')" data-i18n="subsubmenu.procurement.rfq">Requests for Quotation</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Supplier Quotations')" data-i18n="subsubmenu.procurement.supplierQuotes">Supplier Quotations</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Purchase Orders')" data-i18n="subsubmenu.procurement.orders">Purchase Orders</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Goods Received')" data-i18n="subsubmenu.procurement.received">Goods Received</div>
+                        </div>
+                    </div>
+                    <div class="submenu-item">
+                        <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                            <span data-i18n="submenu.procurement.more">More</span>
+                            <span class="submenu-arrow" aria-hidden="true">▶</span>
+                        </button>
+                        <div class="subsubmenu">
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Evaluation Criteria')" data-i18n="subsubmenu.procurement.evaluation">Evaluation Criteria</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manufacturing -->
+            <div class="menu-item">
+                <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                    <span class="menu-icon" aria-hidden="true">🏭</span>
+                    <span class="menu-text" data-i18n="menu.manufacturing">Manufacturing</span>
+                    <span class="menu-arrow" aria-hidden="true">▶</span>
+                    <div class="menu-tooltip" data-i18n="menu.manufacturing">Manufacturing</div>
+                </button>
+                <div class="submenu">
+                    <div class="submenu-item">
+                        <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                            <span data-i18n="submenu.manufacturing.management">Manufacturing Management</span>
+                            <span class="submenu-arrow" aria-hidden="true">▶</span>
+                        </button>
+                        <div class="subsubmenu">
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Work Stations')" data-i18n="subsubmenu.manufacturing.workstations">Work Stations</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Machines')" data-i18n="subsubmenu.manufacturing.machines">Machines</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Production Orders')" data-i18n="subsubmenu.manufacturing.orders">Production Orders</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Settings')" data-i18n="subsubmenu.manufacturing.settings">Settings</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales -->
+            <div class="menu-item">
+                <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                    <span class="menu-icon" aria-hidden="true">💼</span>
+                    <span class="menu-text" data-i18n="menu.sales">Sales</span>
+                    <span class="menu-arrow" aria-hidden="true">▶</span>
+                    <div class="menu-tooltip" data-i18n="menu.sales">Sales</div>
+                </button>
+                <div class="submenu">
+                    <div class="submenu-item">
+                        <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                            <span data-i18n="submenu.sales.general">General</span>
+                            <span class="submenu-arrow" aria-hidden="true">▶</span>
+                        </button>
+                        <div class="subsubmenu">
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Sales Overview')" data-i18n="subsubmenu.sales.overview">Sales Overview</div>
+                            <div class="subsubmenu-item" onclick="loadPage(this, 'Sales Reports')" data-i18n="subsubmenu.sales.reports">Sales Reports</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- HR Management -->
+            <div class="menu-item">
+            <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                <span class="menu-icon" aria-hidden="true">👥</span>
+                <span class="menu-text" data-i18n="menu.hr">HR Management</span>
+                <span class="menu-arrow" aria-hidden="true">▶</span>
+                <div class="menu-tooltip" data-i18n="menu.hr">HR Management</div>
+            </button>
+            <div class="submenu">
+                <div class="submenu-item">
+                <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                    <span data-i18n="submenu.hr.employees">Employees</span>
+                    <span class="submenu-arrow" aria-hidden="true">▶</span>
+                </button>
+                <div class="subsubmenu">
+                    <div class="subsubmenu-item" onclick="loadPage(this, 'Employee Management')" data-i18n="subsubmenu.hr.employeeManagement">Employee Management</div>
+                    <div class="subsubmenu-item" onclick="loadPage(this, 'Attendance')" data-i18n="subsubmenu.hr.attendance">Attendance</div>
+                    <div class="subsubmenu-item" onclick="loadPage(this, 'Leave Management')" data-i18n="subsubmenu.hr.leave">Leave Management</div>
+                    <div class="subsubmenu-item" onclick="loadPage(this, 'Payroll')" data-i18n="subsubmenu.hr.payroll">Payroll</div>
+                </div>
+                </div>
+
+                <div class="submenu-item">
+                <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                    <span data-i18n="submenu.hr.recruitment">Recruitment</span>
+                    <span class="submenu-arrow" aria-hidden="true">▶</span>
+                </button>
+                <div class="subsubmenu">
+                    <div class="subsubmenu-item" onclick="loadPage(this, 'Job Postings')" data-i18n="subsubmenu.hr.jobPostings">Job Postings</div>
+                    <div class="subsubmenu-item" onclick="loadPage(this, 'Applications')" data-i18n="subsubmenu.hr.applications">Applications</div>
+                    <div class="subsubmenu-item" onclick="loadPage(this, 'Interviews')" data-i18n="subsubmenu.hr.interviews">Interviews</div>
+                </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="menu-item">
+            <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
+                <span class="menu-icon" aria-hidden="true">⚙️</span>
+                <span class="menu-text" data-i18n="menu.settings">Settings</span>
+                <span class="menu-arrow" aria-hidden="true">▶</span>
+                <div class="menu-tooltip" data-i18n="menu.settings">Settings</div>
+            </button>
+            <div class="submenu">
+                <div class="submenu-item" onclick="loadPage(this, 'User Management')" data-i18n="submenu.settings.userManagement">User Management</div>
+
+                <div class="submenu-item">
+                    <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
+                        <span data-i18n="submenu.settings.system">System</span>
+                        <span class="submenu-arrow" aria-hidden="true">▶</span>
+                    </button>
+                    <div class="subsubmenu">
+                        <div class="subsubmenu-item" onclick="loadPage(this, 'System Configuration')" data-i18n="subsubmenu.settings.systemConfig">System Configuration</div>
+                        <div class="subsubmenu-item" onclick="loadPage(this, 'Backup & Restore')" data-i18n="subsubmenu.settings.backup">Backup & Restore</div>
+                        <div class="subsubmenu-item" onclick="loadPage(this, 'Audit Logs')" data-i18n="subsubmenu.settings.auditLogs">Audit Logs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </nav>
 
     <!-- Main Content -->
     <div class="main-content">
-        <div class="cards">
-            <div class="card">
-                <h3>Profit & Loss</h3>
-                <div class="value">19156.67</div>
-                <p>Revenue Growth: <strong>19.09%</strong></p>
+        <div class="topbar">
+            <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">☰</button>
+            <h1 class="page-title" data-i18n="title.dashboard">Dashboard</h1>
+            <div class="topbar-actions">
+                <div class="language-toggle" role="group" aria-label="Language switcher">
+                    <button class="lang-btn active" onclick="switchLanguage(this, 'en')" aria-pressed="true">EN</button>
+                    <button class="lang-btn" onclick="switchLanguage(this, 'sw')" aria-pressed="false">SW</button>
+                </div>
+                <button class="logout-btn" id="logoutBtn" data-i18n="action.logout" onclick="logout()">Logout</button>
             </div>
-            <div class="card">
-                <h3>Expenses</h3>
-                <div class="value">0</div>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="welcome-card">
+                <h2 class="welcome-title" data-i18n="welcome.title">Welcome to ThinkShip ERP</h2>
+                <p class="welcome-subtitle" data-i18n="welcome.subtitle">Manage your business operations efficiently with our comprehensive ERP solution.</p>
             </div>
-            <div class="card">
-                <h3>Cash Ledgers</h3>
-                <p>💵 Cash at Hand: <strong>60,000</strong></p>
-                <p>🏦 Cash at Bank: <strong>48,000</strong></p>
-                <p>📱 Mobile Money: <strong>138,500</strong></p>
-                <button>Manage Ledgers</button>
-                <button>View Transactions</button>
-            </div>
-            <div class="card">
-                <h3>Sales Trend</h3>
-                <div class="chart">[Chart Placeholder]</div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">💰</div>
+                        <div>
+                            <div class="stat-value">$125,430</div>
+                            <div class="stat-label" data-i18n="stats.revenue">Total Revenue</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white;">📦</div>
+                        <div>
+                            <div class="stat-value">1,247</div>
+                            <div class="stat-label" data-i18n="stats.stock">Products in Stock</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">📋</div>
+                        <div>
+                            <div class="stat-value">89</div>
+                            <div class="stat-label" data-i18n="stats.orders">Pending Orders</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;">👥</div>
+                        <div>
+                            <div class="stat-value">156</div>
+                            <div class="stat-label" data-i18n="stats.users">Active Users</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        // ---------- i18n (EN/SW) ----------
+        const I18N = {
+  en: {
+    // General
+    'title.dashboard': 'Dashboard',
+    'action.logout': 'Logout',
+    'welcome.title': 'Welcome to ThinkShip ERP',
+    'welcome.subtitle': 'Manage your business operations efficiently with our comprehensive ERP solution.',
+    'stats.revenue': 'Total Revenue',
+    'stats.stock': 'Products in Stock',
+    'stats.orders': 'Pending Orders',
+    'stats.users': 'Active Users',
+
+    // Reports (menu text stays English in both langs if you want)
+    'menu.reports': 'Reports',
+    'submenu.accounting': 'Accounting',
+    'subsubmenu.quotations': 'Quotations',
+    'subsubmenu.salesOrders': 'Sales Orders',
+    'subsubmenu.deliveryNotes': 'Delivery Notes',
+    'subsubmenu.invoices': 'Invoices',
+    'subsubmenu.trialBalance': 'Trial Balance',
+    'subsubmenu.trialBalanceComparison': 'Trial Balance Comparison',
+    'subsubmenu.incomeStatement': 'Income Statement',
+    'subsubmenu.balanceSheet': 'Balance Sheet',
+    'subsubmenu.balanceSheetComparison': 'Balance Sheet Comparison',
+    'subsubmenu.ownersEquitySummary': "Owner's Equity Summary",
+    'subsubmenu.generalLedger': 'General Ledger',
+    'subsubmenu.cashBook': 'Cash Book',
+    'subsubmenu.cashFlow': 'Cash Flow',
+    'subsubmenu.detailedOwnersEquity': "Detailed Owner's Equity",
+    'subsubmenu.budgetComparison': 'Budget Comparison',
+
+    'submenu.customers': 'Customers',
+    'subsubmenu.customerManagement': 'Customer Management',
+    'subsubmenu.customerGroups': 'Customer Groups',
+
+    // TOP-LEVEL MENUS YOU POSTED
+    'menu.inventory': 'Inventory',
+    'menu.requisitions': 'Requisitions',
+
+    // Inventory (matches your HTML data-i18n)
+    'submenu.inventory.summary': 'Summary',
+    'submenu.inventory.pos': 'Point of Sale',
+    'submenu.inventory.stock_in': 'Stock In',
+    'submenu.inventory.stock_out': 'Stock Out',
+    'submenu.inventory.configurations': 'Configurations',
+    'subsubmenu.inventory.stores': 'Stores',
+    'subsubmenu.inventory.suppliers': 'Suppliers',
+    'subsubmenu.inventory.trucks': 'Trucks',
+    'subsubmenu.inventory.drivers': 'Drivers',
+    'subsubmenu.inventory.item_categories': 'Item Categories',
+    'subsubmenu.inventory.items': 'Items',
+    'subsubmenu.inventory.units': 'Units of Measurements',
+
+    // Requisitions
+    'submenu.requisitions.expense': 'Expense Requisitions',
+    'submenu.requisitions.fuel': 'Fuel Requisitions',
+    'submenu.requisitions.store': 'Store Requisitions',
+    'submenu.requisitions.cash': 'Cash Requisitions Details',
+    // --- Accounts ---
+    'menu.accounts': 'Accounts',
+    'submenu.expenseTransactions': 'Expense Transactions',
+    'submenu.incomeTransactions': 'Income Transactions',
+    'submenu.internalCashTransfer': 'Internal Cash Transfer',
+    'submenu.otherTransactions': 'Other Transactions',
+    'submenu.chartOfAccounts': 'Chart of Accounts',
+    'submenu.configurations': 'Configurations',
+    'subsubmenu.categories': 'Categories',
+    'subsubmenu.subCategories': 'Sub Categories',
+    'subsubmenu.fiscalYears': 'Fiscal Years',
+    'subsubmenu.currencies': 'Currencies',
+    'subsubmenu.paymentMethods': 'Payment Methods',
+
+    // --- Budgets ---
+    'menu.budgets': 'Budgets',
+    'submenu.budgets': 'Budgets',
+    'submenu.budgetCategories': 'Budget Categories',
+    // Procurement
+    'menu.procurement': 'Procurement',
+    'submenu.procurement.configurations': 'Configurations',
+    'submenu.procurement.procurementTypes': 'Procurement Types',
+    'submenu.procurement.services': 'Services',
+    'submenu.procurement.purchaseRequests': 'Purchase Requests',
+    'submenu.procurement.generalOperations': 'General Operations',
+    'submenu.procurement.rfq': 'Requests for Quotation',
+    'submenu.procurement.supplierQuotations': 'Supplier Quotations',
+    'submenu.procurement.purchaseOrders': 'Purchase Orders',
+    'submenu.procurement.goodsReceived': 'Goods Received',
+    'submenu.procurement.more': 'More',
+    'submenu.procurement.evaluationCriteria': 'Evaluation Criteria',
+
+    // Manufacturing
+    'menu.manufacturing': 'Manufacturing',
+    'submenu.manufacturing.management': 'Manufacturing Management',
+    'submenu.manufacturing.workStations': 'Work Stations',
+    'submenu.manufacturing.machines': 'Machines',
+    'submenu.manufacturing.productionOrders': 'Production Orders',
+    'submenu.manufacturing.settings': 'Settings',
+
+    // Sales
+    'menu.sales': 'Sales',
+    'submenu.sales.general': 'General',
+    'submenu.sales.overview': 'Sales Overview',
+    'submenu.sales.reports': 'Sales Reports',
+    
+    // HR
+    "menu.hr": "HR Management",
+    "submenu.hr.employees": "Employees",
+    "subsubmenu.hr.employeeManagement": "Employee Management",
+    "subsubmenu.hr.attendance": "Attendance",
+    "subsubmenu.hr.leave": "Leave Management",
+    "subsubmenu.hr.payroll": "Payroll",
+    "submenu.hr.recruitment": "Recruitment",
+    "subsubmenu.hr.jobPostings": "Job Postings",
+    "subsubmenu.hr.applications": "Applications",
+    "subsubmenu.hr.interviews": "Interviews",
+
+    // Settings
+    "menu.settings": "Settings",
+    "submenu.settings.userManagement": "User Management",
+    "submenu.settings.system": "System",
+    "subsubmenu.settings.systemConfig": "System Configuration",
+    "subsubmenu.settings.backup": "Backup & Restore",
+    "subsubmenu.settings.auditLogs": "Audit Logs"
+  },
+
+  sw: {
+    // General
+    'title.dashboard': 'Dashibodi',
+    'action.logout': 'Ondoka',
+    'welcome.title': 'Karibu ThinkShip ERP',
+    'welcome.subtitle': 'Simamia shughuli za biashara kwa ufanisi kupitia mfumo wetu kamili wa ERP.',
+    'stats.revenue': 'Mapato Yote',
+    'stats.stock': 'Bidhaa Zilizopo',
+    'stats.orders': 'Oda Zinazosubiri',
+    'stats.users': 'Watumiaji Hai',
+
+    // Reports (menu text stays English if you want)
+    'menu.reports': 'Reports',
+    'submenu.accounting': 'Uhasibu',
+    'subsubmenu.quotations': 'Bei za Nukuu',
+    'subsubmenu.salesOrders': 'Oda za Mauzo',
+    'subsubmenu.deliveryNotes': 'Hati za Utoaji',
+    'subsubmenu.invoices': 'Ankara',
+    'subsubmenu.trialBalance': 'Jaribio la Mizania',
+    'subsubmenu.trialBalanceComparison': 'Ulinganisho wa Jaribio la Mizania',
+    'subsubmenu.incomeStatement': 'Taarifa ya Mapato',
+    'subsubmenu.balanceSheet': 'Taarifa ya Fedha',
+    'subsubmenu.balanceSheetComparison': 'Ulinganisho wa Taarifa ya Fedha',
+    'subsubmenu.ownersEquitySummary': 'Muhtasari wa Hisa za Wamiliki',
+    'subsubmenu.generalLedger': 'Kitabu Kikuu',
+    'subsubmenu.cashBook': 'Kitabu cha Fedha',
+    'subsubmenu.cashFlow': 'Mtiririko wa Fedha',
+    'subsubmenu.detailedOwnersEquity': 'Hisa za Wamiliki kwa Kina',
+    'subsubmenu.budgetComparison': 'Ulinganisho wa Bajeti',
+
+    'submenu.customers': 'Wateja',
+    'subsubmenu.customerManagement': 'Usimamizi wa Wateja',
+    'subsubmenu.customerGroups': 'Makundi ya Wateja',
+
+    // TOP-LEVEL MENUS YOU POSTED
+    'menu.inventory': 'Hisa',
+    'menu.requisitions': 'Maombi',
+
+    // Inventory
+    'submenu.inventory.summary': 'Muhtasari',
+    'submenu.inventory.pos': 'Sehemu ya Mauzo',
+    'submenu.inventory.stock_in': 'Hisa Zilizopokelewa',
+    'submenu.inventory.stock_out': 'Hisa Zilizotolewa',
+    'submenu.inventory.configurations': 'Mipangilio',
+    'subsubmenu.inventory.stores': 'Maduka',
+    'subsubmenu.inventory.suppliers': 'Wasambazaji',
+    'subsubmenu.inventory.trucks': 'Magari ya Mizigo',
+    'subsubmenu.inventory.drivers': 'Madereva',
+    'subsubmenu.inventory.item_categories': 'Makundi ya Bidhaa',
+    'subsubmenu.inventory.items': 'Bidhaa',
+    'subsubmenu.inventory.units': 'Vitengo vya Vipimo',
+
+    // Requisitions
+    'submenu.requisitions.expense': 'Maombi ya Matumizi',
+    'submenu.requisitions.fuel': 'Maombi ya Mafuta',
+    'submenu.requisitions.store': 'Maombi ya Duka',
+    'submenu.requisitions.cash': 'Maelezo ya Maombi ya Fedha',
+    // --- Accounts ---
+    'menu.accounts': 'Akaunti',
+    'submenu.expenseTransactions': 'Miamala ya Matumizi',
+    'submenu.incomeTransactions': 'Miamala ya Mapato',
+    'submenu.internalCashTransfer': 'Uhamisho wa Fedha wa Ndani',
+    'submenu.otherTransactions': 'Miamala Mengine',
+    'submenu.chartOfAccounts': 'Orodha ya Akaunti',
+    'submenu.configurations': 'Mipangilio',
+    'subsubmenu.categories': 'Makundi',
+    'subsubmenu.subCategories': 'Vikundi Vidogo',
+    'subsubmenu.fiscalYears': 'Miaka ya Fedha',
+    'subsubmenu.currencies': 'Sarafu',
+    'subsubmenu.paymentMethods': 'Mbinu za Malipo',
+
+    // --- Budgets ---
+    'menu.budgets': 'Bajeti',
+    'submenu.budgets': 'Bajeti',
+    'submenu.budgetCategories': 'Makundi ya Bajeti',
+    // Procurement
+    'menu.procurement': 'Ununuzi',
+    'submenu.procurement.configurations': 'Mipangilio',
+    'submenu.procurement.procurementTypes': 'Aina za Ununuzi',
+    'submenu.procurement.services': 'Huduma',
+    'submenu.procurement.purchaseRequests': 'Maombi ya Ununuzi',
+    'submenu.procurement.generalOperations': 'Shughuli za Jumla',
+    'submenu.procurement.rfq': 'Maombi ya Nukuu',
+    'submenu.procurement.supplierQuotations': 'Nukuu za Wasambazaji',
+    'submenu.procurement.purchaseOrders': 'Amri za Ununuzi',
+    'submenu.procurement.goodsReceived': 'Bidhaa Zilizopokelewa',
+    'submenu.procurement.more': 'Zaidi',
+    'submenu.procurement.evaluationCriteria': 'Vigezo vya Tathmini',
+
+    // Manufacturing
+    'menu.manufacturing': 'Uzalishaji',
+    'submenu.manufacturing.management': 'Usimamizi wa Uzalishaji',
+    'submenu.manufacturing.workStations': 'Vituo vya Kazi',
+    'submenu.manufacturing.machines': 'Mashine',
+    'submenu.manufacturing.productionOrders': 'Amri za Uzalishaji',
+    'submenu.manufacturing.settings': 'Mipangilio',
+
+    // Sales
+    'menu.sales': 'Mauzo',
+    'submenu.sales.general': 'Jumla',
+    'submenu.sales.overview': 'Muhtasari wa Mauzo',
+    'submenu.sales.reports': 'Ripoti za Mauzo',
+
+    // HR
+    "menu.hr": "Usimamizi wa Rasilimali Watu",
+    "submenu.hr.employees": "Wafanyakazi",
+    "subsubmenu.hr.employeeManagement": "Usimamizi wa Wafanyakazi",
+    "subsubmenu.hr.attendance": "Mahudhurio",
+    "subsubmenu.hr.leave": "Usimamizi wa Likizo",
+    "subsubmenu.hr.payroll": "Mishahara",
+    "submenu.hr.recruitment": "Uajiri",
+    "subsubmenu.hr.jobPostings": "Matangazo ya Kazi",
+    "subsubmenu.hr.applications": "Maombi",
+    "subsubmenu.hr.interviews": "Usaili",
+
+    // Settings
+    "menu.settings": "Mipangilio",
+    "submenu.settings.userManagement": "Usimamizi wa Watumiaji",
+    "submenu.settings.system": "Mfumo",
+    "subsubmenu.settings.systemConfig": "Mipangilio ya Mfumo",
+    "subsubmenu.settings.backup": "Hifadhi & Rejesha",
+    "subsubmenu.settings.auditLogs": "Kumbukumbu za Ukaguzi"
+  }
+};
+
+
+
+        function applyI18n(lang) {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                const text = I18N[lang] && I18N[lang][key];
+                if (text) el.textContent = text;
+            });
+        }
+
+        // Fix: language switch accepts the clicked button, not global event
+        function switchLanguage(button, lang) {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+            applyI18n(lang);
+            console.log('Switching to language:', lang);
+        }
+
+        // ---------- Collapsible helpers with smooth height ----------
+        function setExpanded(btn, expanded) {
+            btn.setAttribute('aria-expanded', String(expanded));
+        }
+        // Smoothly open
+        function openSection(container) {
+            container.style.display = "block"; // ensure it's visible
+            const height = container.scrollHeight + "px";
+            container.style.maxHeight = height;
+            container.style.opacity = "1";
+
+            // After transition, allow natural height (auto)
+            container.addEventListener("transitionend", function handler() {
+                container.style.maxHeight = "none";
+                container.removeEventListener("transitionend", handler);
+            });
+        }
+
+        // Smoothly close
+        function closeSection(container) {
+            // Force current height (even if "auto")
+            container.style.maxHeight = container.scrollHeight + "px";
+            container.style.opacity = "0";
+
+            // Force reflow to apply the height before collapsing
+            container.offsetHeight; 
+            container.style.maxHeight = "0px";
+        }
+
+
+        // Toggle main menu items
+        function toggleMenu(button) {
+            const menuItem = button.parentElement;
+            const submenu = menuItem.querySelector('.submenu');
+            const willOpen = !menuItem.classList.contains('open');
+
+            // Close others
+            document.querySelectorAll('.menu-item.open').forEach(item => {
+                if (item !== menuItem) {
+                    item.classList.remove('open');
+                    const sub = item.querySelector('.submenu');
+                    if (sub) closeSection(sub);
+                    const btn = item.querySelector('.menu-toggle-btn');
+                    if (btn) setExpanded(btn, false);
+                }
+            });
+
+            menuItem.classList.toggle('open', willOpen);
+            if (submenu) (willOpen ? openSection(submenu) : closeSection(submenu));
+            setExpanded(button, willOpen);
+        }
+
+        // Toggle submenu items
+        function toggleSubMenu(button) {
+            const submenuItem = button.parentElement;
+            const subsubmenu = submenuItem.querySelector('.subsubmenu');
+            const willOpen = !submenuItem.classList.contains('open');
+
+            // Close siblings within same parent
+            const parentSubmenu = submenuItem.parentElement;
+            parentSubmenu.querySelectorAll('.submenu-item.open').forEach(item => {
+                if (item !== submenuItem) {
+                    item.classList.remove('open');
+                    const sub = item.querySelector('.subsubmenu');
+                    if (sub) closeSection(sub);
+                    const btn = item.querySelector('.submenu-toggle');
+                    if (btn) setExpanded(btn, false);
+                }
+            });
+
+            submenuItem.classList.toggle('open', willOpen);
+            if (subsubmenu) (willOpen ? openSection(subsubmenu) : closeSection(subsubmenu));
+            setExpanded(button, willOpen);
+        }
+
+        // Load page function
+        function loadPage(element, pageName) {
+            document.querySelectorAll('.submenu-item.active, .subsubmenu-item.active').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelector('.page-title').textContent = pageName;
+            console.log('Loading page:', pageName);
+        }
+
+        // Sidebar collapse (desktop) and mobile open/close
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            const expanded = !sidebar.classList.contains('collapsed');
+            document.getElementById('hamburger').setAttribute('aria-expanded', String(expanded));
+        }
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('show');
+            overlay.classList.add('show');
+            document.getElementById('hamburger').setAttribute('aria-expanded', 'true');
+        }
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('show');
+            overlay.classList.remove('show');
+            document.getElementById('hamburger').setAttribute('aria-expanded', 'false');
+        }
+
         // Logout
-        document.getElementById("logoutBtn").addEventListener("click", function () {
-            alert("Logging out...");
-            window.location.href = "index.html";
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                console.log('Logging out...');
+                // Redirect to index.html
+                window.location.href = "index.html";
+            }
+        }
+
+        // ---------- Accessibility: keyboard support ----------
+        function handleToggleKeydown(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (e.currentTarget.classList.contains('menu-toggle-btn')) toggleMenu(e.currentTarget);
+                if (e.currentTarget.classList.contains('submenu-toggle')) toggleSubMenu(e.currentTarget);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('ThinkShip ERP Dashboard initialized');
+
+            // Assign IDs for ARIA controls automatically
+            document.querySelectorAll('.menu-item').forEach((item, idx) => {
+                const btn = item.querySelector('.menu-toggle-btn');
+                const panel = item.querySelector('.submenu');
+                if (btn && panel) {
+                    const id = 'submenu-' + idx;
+                    panel.id = id;
+                    btn.setAttribute('aria-controls', id);
+                    setExpanded(btn, false);
+                }
+            });
+            document.querySelectorAll('.submenu-item').forEach((item, idx) => {
+                const btn = item.querySelector('.submenu-toggle');
+                const panel = item.querySelector('.subsubmenu');
+                if (btn && panel) {
+                    const id = 'subsubmenu-' + idx;
+                    panel.id = id;
+                    btn.setAttribute('aria-controls', id);
+                    setExpanded(btn, false);
+                }
+            });
+
+            // Keyboard toggling
+            document.querySelectorAll('.menu-toggle-btn, .submenu-toggle').forEach(btn => {
+                btn.addEventListener('keydown', handleToggleKeydown);
+            });
+
+            // Hamburger click: mobile vs desktop behavior
+            const hamburger = document.getElementById('hamburger');
+            if (hamburger) {
+                hamburger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (window.innerWidth <= 768) {
+                        toggleMobileSidebar();
+                    } else {
+                        toggleSidebar();
+                    }
+                });
+            }
         });
 
-        // Sidebar toggle for all nested menus
-        document.querySelectorAll(".has-children").forEach(item => {
-            item.addEventListener("click", function (e) {
-                e.stopPropagation();
-                this.classList.toggle("open");
-            });
+        // Close mobile sidebar when clicking outside
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.getElementById('hamburger');
+            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target) && sidebar.classList.contains('show')) {
+                closeMobileSidebar();
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+            }
         });
     </script>
 </body>
