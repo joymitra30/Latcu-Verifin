@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Budgeting & Planning — ThinkShip ERP</title>
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#fbfdff 0%, #f0fdf4 100%);
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0f172a;
+      --brand-start:#10b981; /* green */
+      --brand-end:#059669;
+      --accent:#059669;
+      --shadow: 0 8px 30px rgba(2,6,23,0.06);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased}
+    .wrap{max-width:1180px;margin:28px auto;padding:20px}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0;font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px}
+    @media (max-width:960px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border:1px solid rgba(2,6,23,0.04)}
+
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text],input[type=number],select,textarea,input[type=date]{width:100%;padding:10px;border-radius:10px;border:1px solid #e6edf3;font-size:14px}
+    textarea{min-height:60px}
+    .row{display:flex;gap:8px}
+    .row .col{flex:1}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-start),var(--brand-end));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(2,6,23,0.06);color:var(--brand-end);padding:8px 12px;border-radius:10px}
+    .small{font-size:13px;padding:8px 10px}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#fbfdff}
+    .right{text-align:right}
+
+    .muted-sm{font-size:12px;color:var(--muted)}
+    .chip{display:inline-block;padding:6px 10px;border-radius:999px;background:#ecfdf5;color:#065f46;font-weight:700}
+
+    .chart-wrap{height:260px;padding:12px;border-radius:12px;background:linear-gradient(180deg,#f7fffa,#f0fdf4);}
+    .section-title{font-size:14px;font-weight:700;margin:0 0 8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Budgeting & Planning</h1>
+        <div class="muted">Create budgets by category/department, map accounts, compare Budget vs Actual and run simple projection reports.</div>
+      </div>
+      <div>
+        <button class="btn btn-ghost small" id="exportBudgetsBtn">Export Budgets</button>
+        <button class="btn btn-primary small" id="importSampleBtn">Seed Sample</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Left column: create budget, categories, mappings -->
+      <aside class="card">
+        <div>
+          <h3 class="section-title">Create Budget</h3>
+          <form id="budgetForm">
+            <label for="bYear">Fiscal Year</label>
+            <input id="bYear" type="number" min="2000" max="2100" value="2025" />
+
+            <label for="bDept" style="margin-top:8px">Department / Category</label>
+            <input id="bDept" type="text" placeholder="e.g. Operations, Sales" />
+
+            <label for="bAmount" style="margin-top:8px">Budget Amount (annual)</label>
+            <input id="bAmount" type="number" step="0.01" placeholder="0.00" />
+
+            <label for="bNotes" style="margin-top:8px">Notes (optional)</label>
+            <textarea id="bNotes"></textarea>
+
+            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+              <button type="button" class="btn btn-ghost small" id="resetBudgetBtn">Reset</button>
+              <button type="submit" class="btn btn-primary small">Create Budget</button>
+            </div>
+          </form>
+        </div>
+
+        <hr style="margin:14px 0" />
+
+        <div>
+          <h3 class="section-title">Map Accounts to Budget Category</h3>
+          <div class="muted-sm">Select a budget category and map one or more Chart-of-Accounts codes. This ties GL activity to budgets.</div>
+          <label for="mapBudget">Budget</label>
+          <select id="mapBudget"></select>
+          <label for="mapAccount" style="margin-top:8px">Account (COA)</label>
+          <select id="mapAccount"></select>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary small" id="addMappingBtn">Add Mapping</button>
+            <button class="btn btn-ghost small" id="clearMappingBtn">Clear Mappings</button>
+          </div>
+          <div style="margin-top:12px">
+            <h4 class="muted-sm">Current Mappings</h4>
+            <div id="mappingsList"></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right column: analysis, reports -->
+      <main>
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 class="section-title">Budget vs Actual</h3>
+            <div>
+              <label class="muted-sm">Year</label>
+              <select id="viewYear"></select>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;display:flex;gap:12px">
+            <div style="flex:1">
+              <table id="bvstable"><thead><tr><th>Department</th><th class="right">Budget</th><th class="right">Actual</th><th class="right">Variance</th><th class="right">% Used</th></tr></thead><tbody></tbody></table>
+            </div>
+            <div style="width:360px">
+              <div class="chart-wrap"><canvas id="barchart" width="320" height="200"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="section-title">Projection Reports</h3>
+          <div class="muted-sm">Project future budgets / spending using a simple growth rate applied to actuals or budget.</div>
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+            <label for="projBase">Base on</label>
+            <select id="projBase"><option value="actual">Actual</option><option value="budget">Budget</option></select>
+            <label for="projRate">Annual growth %</label>
+            <input id="projRate" type="number" step="0.01" value="5" style="width:100px" />
+            <label for="projYears">Years</label>
+            <input id="projYears" type="number" min="1" max="10" value="3" style="width:80px" />
+            <button class="btn btn-primary small" id="runProjBtn">Run Projection</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <h4 class="muted-sm">Projection Output</h4>
+            <table id="projTable"><thead><tr><th>Year</th><th class="right">Projected Total</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // storage keys
+    const BUD_KEY = 'ts_demo_budgets_v1';
+    const MAP_KEY = 'ts_demo_budget_mappings_v1'; // {budgetId: [accountCodes...]}
+    const GL_KEY = 'ts_demo_gl_v1';
+    const COA_KEY = 'coa_demo_accounts_v1';
+
+    let budgets = [];
+    let mappings = {};
+    let coa = [];
+
+    function genId(p='x'){ return p + Math.random().toString(36).slice(2,9) }
+
+    function $id(id){ return document.getElementById(id) }
+
+    function loadData(){ try{ budgets = JSON.parse(localStorage.getItem(BUD_KEY)||'[]') }catch(e){ budgets=[] }
+      try{ mappings = JSON.parse(localStorage.getItem(MAP_KEY)||'{}') }catch(e){ mappings={} }
+      try{ coa = JSON.parse(localStorage.getItem(COA_KEY)||'[]') }catch(e){ coa=[] }
+      populateBudgetSelectors(); populateCoaSelector(); populateYearSelector(); renderMappings(); renderBVSTable(); }
+
+    function saveBudgets(){ localStorage.setItem(BUD_KEY, JSON.stringify(budgets)); }
+    function saveMappings(){ localStorage.setItem(MAP_KEY, JSON.stringify(mappings)); }
+
+    // Create budget
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // wire form
+      const form = $id('budgetForm');
+      if (form) form.addEventListener('submit', (e)=>{ e.preventDefault(); createBudget(); });
+      if ($id('resetBudgetBtn')) $id('resetBudgetBtn').addEventListener('click', ()=> { form.reset(); });
+      if ($id('addMappingBtn')) $id('addMappingBtn').addEventListener('click', addMapping);
+      if ($id('clearMappingBtn')) $id('clearMappingBtn').addEventListener('click', ()=>{ mappings = {}; saveMappings(); renderMappings(); });
+      if ($id('exportBudgetsBtn')) $id('exportBudgetsBtn').addEventListener('click', exportBudgets);
+      if ($id('importSampleBtn')) $id('importSampleBtn').addEventListener('click', seedSample);
+      if ($id('viewYear')) $id('viewYear').addEventListener('change', renderBVSTable);
+      if ($id('runProjBtn')) $id('runProjBtn').addEventListener('click', runProjection);
+
+      loadData();
+    });
+
+    function createBudget(){ const year = parseInt(($id('bYear')?.value)||new Date().getFullYear()); const dept = ($id('bDept')?.value||'').trim(); const amount = parseFloat(($id('bAmount')?.value)||0); const notes = ($id('bNotes')?.value||'').trim(); if(!dept || amount<=0){ alert('Provide department and budget amount'); return; }
+      const b = { id: genId('bud'), year, dept, amount, notes, createdAt: new Date().toISOString() };
+      budgets.push(b); saveBudgets(); populateBudgetSelectors(); renderMappings(); renderBVSTable(); alert('Budget created'); $id('budgetForm').reset(); }
+
+    function populateBudgetSelectors(){ const sel = $id('mapBudget'); if(!sel) return; sel.innerHTML = '<option value="">-- Select budget --</option>'; budgets.forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.textContent = b.year + ' — ' + b.dept + ' — ' + Number(b.amount).toLocaleString(); sel.appendChild(o); });
+      // also populate budget list used in BVS
+      const vy = $id('viewYear'); if(vy){ vy.innerHTML=''; const years = Array.from(new Set(budgets.map(b=>b.year))).sort(); if(years.length===0){ const y=new Date().getFullYear(); vy.innerHTML = '<option value="'+y+'">'+y+'</option>'; } else { years.forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y; vy.appendChild(o); }); }
+      }
+    }
+
+    function populateCoaSelector(){ const sel = $id('mapAccount'); if(!sel) return; sel.innerHTML = '<option value="">-- Select account --</option>'; coa.forEach(a=>{ const o = document.createElement('option'); o.value = a.code || a.id; o.textContent = (a.code? a.code+' — ':'') + a.name; sel.appendChild(o); }); }
+
+    function addMapping(){ const bid = ($id('mapBudget')?.value||''); const acc = ($id('mapAccount')?.value||''); if(!bid || !acc){ alert('Select budget and account'); return; } mappings[bid] = mappings[bid] || []; if(!mappings[bid].includes(acc)) mappings[bid].push(acc); saveMappings(); renderMappings(); }
+
+    function renderMappings(){ const node = $id('mappingsList'); if(!node) return; node.innerHTML = ''; budgets.forEach(b=>{ const wrap = document.createElement('div'); wrap.style.marginBottom='10px'; const header = document.createElement('div'); header.innerHTML = '<strong>' + b.year + ' — ' + escapeHtml(b.dept) + '</strong> <span class="muted-sm">(' + Number(b.amount).toLocaleString() + ')</span>'; wrap.appendChild(header); const mapped = mappings[b.id] || []; if(mapped.length===0){ const p = document.createElement('div'); p.className='muted-sm'; p.textContent = 'No accounts mapped'; wrap.appendChild(p); } else { const list = document.createElement('div'); mapped.forEach(code=>{ const a = coa.find(x=> (x.code||x.id)===code); const label = a ? ((a.code? a.code+' — ':'') + a.name) : code; const pill = document.createElement('div'); pill.className='chip'; pill.style.display='inline-block'; pill.style.margin='4px 8px 4px 0'; pill.textContent = label; list.appendChild(pill); }); wrap.appendChild(list); }
+      // remove mapping button
+      const rm = document.createElement('button'); rm.className='btn btn-ghost small'; rm.textContent='Remove'; rm.style.marginTop='6px'; rm.onclick = ()=>{ if(confirm('Remove all mappings for this budget?')){ delete mappings[b.id]; saveMappings(); renderMappings(); } }; wrap.appendChild(rm);
+      node.appendChild(wrap);
+    }); }
+
+    // Budget vs Actual: compute actuals from GL by summing journal lines for mapped accounts
+    function getGL(){ try{ return JSON.parse(localStorage.getItem(GL_KEY) || '[]') }catch(e){ return [] } }
+
+    function computeActualForBudget(b){ const gl = getGL(); const mapped = mappings[b.id] || []; if(mapped.length===0) return 0; // sum all lines where account code matches mapped codes and the journal date is in year
+      const year = b.year; let sum = 0; gl.forEach(j=>{ // j.lines expected
+        try{ const jdate = new Date(j.date||j.postedAt||j.createdAt||''); if(jdate.getFullYear() !== Number(year)) return; (j.lines||[]).forEach(line=>{ const acct = line.account || ''; if(mapped.includes(acct)){
+              // treat debit positive, credit negative for expense accounts — we'll sum amounts as they appear
+              if(line.dc === 'debit') sum += Number(line.amount||0); else if(line.dc === 'credit') sum -= Number(line.amount||0); else sum += Number(line.amount||0);
+            } }); }catch(err){}
+      }); return sum; }
+
+    // Render budget vs actual table and chart
+    function renderBVSTable(){ const tbody = $id('bvstable')?.querySelector('tbody'); if(!tbody) return; tbody.innerHTML=''; const year = Number(($id('viewYear')?.value) || (new Date().getFullYear())); const list = budgets.filter(b=> Number(b.year) === year); const chartData = []; list.forEach(b=>{ const actual = computeActualForBudget(b); const budgeted = Number(b.amount||0); const variance = budgeted - actual; const pct = budgeted===0 ? 0 : (actual/budgeted)*100; const tr = document.createElement('tr'); tr.innerHTML = '<td>'+escapeHtml(b.dept)+'</td><td class="right">'+Number(budgeted).toLocaleString()+'</td><td class="right">'+Number(actual).toLocaleString()+'</td><td class="right">'+Number(variance).toLocaleString()+'</td><td class="right">'+pct.toFixed(1)+'%</td>'; tbody.appendChild(tr); chartData.push({label: b.dept, budget: budgeted, actual: actual}); }); drawBarChart(chartData);
+    }
+
+    // Simple canvas bar chart (budget vs actual)
+    function drawBarChart(data){ const canvas = $id('barchart'); if(!canvas) return; const ctx = canvas.getContext('2d'); const w = canvas.width; const h = canvas.height; ctx.clearRect(0,0,w,h); if(!data || data.length===0){ ctx.fillStyle='#9ca3af'; ctx.font='14px Inter'; ctx.fillText('No data to display', 20, 40); return; }
+      // compute scales
+      const maxVal = Math.max(...data.map(d=> Math.max(d.budget, Math.abs(d.actual)) ), 1);
+      const padding = 24; const barW = Math.min(28, (w - padding*2) / Math.max(data.length,1) / 2);
+      data.forEach((d,i)=>{ const xBase = padding + i * ((w - padding*2)/Math.max(data.length,1)); // budget (green)
+        const bx = xBase + 10;
+        const bh = (d.budget / maxVal) * (h - 60);
+        ctx.fillStyle = 'rgba(5,150,105,0.9)'; ctx.fillRect(bx, h-30-bh, barW, bh);
+        // actual (dark gray)
+        const ax = bx + barW + 6; const ah = (Math.abs(d.actual) / maxVal) * (h - 60);
+        ctx.fillStyle = 'rgba(55,65,81,0.9)'; ctx.fillRect(ax, h-30-ah, barW, ah);
+        // labels
+        ctx.fillStyle = '#374151'; ctx.font='11px Inter'; const label = d.label.length>12 ? d.label.slice(0,11)+'…' : d.label; ctx.fillText(label, bx-4, h-8);
+      });
+      // legend
+      ctx.fillStyle='rgba(5,150,105,0.9)'; ctx.fillRect(w-160,8,12,12); ctx.fillStyle='#374151'; ctx.font='12px Inter'; ctx.fillText('Budget', w-140, 18);
+      ctx.fillStyle='rgba(55,65,81,0.9)'; ctx.fillRect(w-80,8,12,12); ctx.fillStyle='#374151'; ctx.fillText('Actual', w-60, 18);
+    }
+
+    // Projection reports
+    function runProjection(){ const base = ($id('projBase')?.value) || 'actual'; const rate = parseFloat(($id('projRate')?.value)||0)/100; const years = parseInt(($id('projYears')?.value)||3); // compute total base
+      let totalBase = 0; const year = Number(($id('viewYear')?.value) || new Date().getFullYear()); const list = budgets.filter(b=> Number(b.year) === year);
+      if(base === 'actual'){ list.forEach(b=> totalBase += computeActualForBudget(b)); } else { list.forEach(b=> totalBase += Number(b.amount||0)); }
+      const tbody = $id('projTable')?.querySelector('tbody'); if(!tbody) return; tbody.innerHTML=''; let current = totalBase; for(let i=1;i<=years;i++){ current = current * (1 + rate); const tr = document.createElement('tr'); tr.innerHTML = '<td>'+(year + i)+'</td><td class="right">'+Number(current).toLocaleString(undefined,{maximumFractionDigits:2})+'</td>'; tbody.appendChild(tr); }
+    }
+
+    // helpers
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // seed sample data
+    function seedSample(){ if(!confirm('Seed sample budgets and mappings?')) return; // sample COA if none
+      try{ const existingCoa = JSON.parse(localStorage.getItem(COA_KEY)||'[]'); if(!existingCoa || existingCoa.length===0){ const sample = [ {id:'a1',code:'5000',name:'Office Supplies'}, {id:'a2',code:'5100',name:'Fuel'}, {id:'a3',code:'5200',name:'Salaries'}, {id:'a4',code:'4100',name:'Sales Revenue'} ]; localStorage.setItem(COA_KEY, JSON.stringify(sample)); coa = sample; } }catch(e){}
+      // budgets
+      budgets = [ {id:genId('bud'), year:2025, dept:'Operations', amount:120000}, {id:genId('bud'), year:2025, dept:'Sales', amount:200000}, {id:genId('bud'), year:2025, dept:'HR', amount:80000} ]; saveBudgets(); // mappings
+      mappings = {}; mappings[budgets[0].id] = ['5000','5100']; mappings[budgets[1].id] = ['4100']; mappings[budgets[2].id] = ['5200']; saveMappings(); alert('Seeded sample budgets, COA and mappings'); loadData(); }
+
+    function exportBudgets(){ const out = {budgets, mappings}; const blob = new Blob([JSON.stringify(out,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='budgets_export.json'; a.click(); URL.revokeObjectURL(url); }
+
+    // init
+    document.addEventListener('DOMContentLoaded', ()=>{ loadData(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Statement of Changes in Equity — ThinkShip ERP</title>
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#ffffff 0%, #f6f9f9 100%);
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0f172a;
+      --brand-start:#7c3aed; /* violet accent */
+      --brand-end:#6d28d9;
+      --accent:#6d28d9;
+      --shadow: 0 10px 30px rgba(2,6,23,0.06);
+      --radius: 14px;
+      --mono: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    }
+    *{box-sizing:border-box}
+    body{font-family:var(--mono);margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0;font-weight:800}
+    .muted{color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border:1px solid rgba(109,40,217,0.06)}
+    input,select{padding:10px;border-radius:10px;border:1px solid #e6edf3;font-size:14px}
+    .btn{padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-start),var(--brand-end));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--brand-end)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#fbfdff}
+    .right{text-align:right}
+    .muted-sm{font-size:12px;color:var(--muted)}
+    .section-title{font-weight:700;margin:0 0 8px}
+    code{background:#f6f3ff;padding:4px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Statement of Changes in Equity</h1>
+        <div class="muted">Shows opening equity, comprehensive income (net profit), owner contributions, distributions and closing equity for the period.</div>
+      </div>
+      <div>
+        <button class="btn btn-ghost small" id="exportCsv">Export CSV</button>
+        <button class="btn btn-primary small" id="runBtn">Run</button>
+      </div>
+    </header>
+
+    <div class="card" style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label class="muted-sm">From</label>
+      <input type="date" id="fromDate" />
+      <label class="muted-sm">To</label>
+      <input type="date" id="toDate" />
+      <label class="muted-sm">Equity Currency</label>
+      <select id="currency"><option>TSH</option><option>USD</option></select>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Statement</h3>
+      <div class="muted-sm">Calculations use GL (localStorage key <code>ts_demo_gl_v1</code>) and Income Statement mappings where applicable.</div>
+
+      <table id="equityTable"><thead><tr><th>Item</th><th class="right">Amount</th></tr></thead><tbody></tbody><tfoot><tr><th>Closing Equity</th><th class="right" id="closingEquity">0</th></tr></tfoot></table>
+    </div>
+
+    <div style="height:18px"></div>
+
+    <div class="card">
+      <h3 class="section-title">Breakdown (Optional)</h3>
+      <p class="muted-sm">Map equity-related accounts (contributions, distributions, retained earnings) to categories for clearer breakdown.</p>
+      <label style="margin-top:8px">Category</label>
+      <select id="mapCategory"><option value="contribution">Owner Contributions</option><option value="distribution">Distributions / Dividends</option><option value="retained">Retained Earnings</option></select>
+      <label style="margin-top:8px">Account (COA Code)</label>
+      <input id="mapAccount" type="text" placeholder="e.g. 3000 or 3100" />
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-primary small" id="addMap">Add</button>
+        <button class="btn btn-ghost small" id="clearMaps">Clear</button>
+      </div>
+      <div style="margin-top:12px">
+        <h4 class="muted-sm">Mappings</h4>
+        <div id="mappingsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GL_KEY = 'ts_demo_gl_v1';
+    const MAPS_KEY = 'ts_demo_report_mappings_sce_v1';
+    const INCOME_MAP_KEY = 'ts_demo_report_mappings_income_v1';
+
+    let mappings = { contribution: [], distribution: [], retained: [] };
+
+    function genId(p='x'){ return p + Math.random().toString(36).slice(2,9) }
+    function $id(id){ return document.getElementById(id) }
+
+    function loadMappings(){ try{ const raw = localStorage.getItem(MAPS_KEY); if(raw) mappings = JSON.parse(raw); }catch(e){ mappings = { contribution: [], distribution: [], retained: [] } } renderMappings(); }
+    function saveMappings(){ localStorage.setItem(MAPS_KEY, JSON.stringify(mappings)); renderMappings(); }
+
+    function renderMappings(){ const node = $id('mappingsList'); if(!node) return; node.innerHTML=''; Object.keys(mappings).forEach(key=>{ const wrap = document.createElement('div'); wrap.style.marginBottom='8px'; const title = document.createElement('div'); title.innerHTML = '<strong>'+key.toUpperCase()+'</strong>'; wrap.appendChild(title); const list = document.createElement('div'); list.style.marginTop='6px'; (mappings[key]||[]).forEach(code=>{ const chip = document.createElement('span'); chip.style.display='inline-block'; chip.style.padding='6px 10px'; chip.style.borderRadius='12px'; chip.style.margin='4px'; chip.style.background='#f6f3ff'; chip.style.fontWeight=700; chip.textContent = code; const rm = document.createElement('button'); rm.textContent='x'; rm.style.marginLeft='8px'; rm.onclick = ()=>{ mappings[key] = mappings[key].filter(c=> c !== code); saveMappings(); }; chip.appendChild(rm); list.appendChild(chip); }); wrap.appendChild(list); node.appendChild(wrap); }); }
+
+    function addMapping(){ const cat = $id('mapCategory').value; const acct = ($id('mapAccount').value||'').trim(); if(!acct){ alert('Enter an account code'); return; } mappings[cat] = mappings[cat] || []; if(!mappings[cat].includes(acct)) mappings[cat].push(acct); saveMappings(); $id('mapAccount').value=''; }
+    function clearMappings(){ if(!confirm('Clear mappings?')) return; mappings = { contribution: [], distribution: [], retained: [] }; saveMappings(); }
+
+    function getGL(){ try{ return JSON.parse(localStorage.getItem(GL_KEY) || '[]') }catch(e){ return [] } }
+
+    function signedLineAmount(line){ if(!line) return 0; if(line.dc === 'debit') return Number(line.amount||0); if(line.dc === 'credit') return -Number(line.amount||0); return Number(line.amount||0); }
+
+    function balanceForAccounts(accountList, fromIso, toIso){ const gl = getGL(); const from = fromIso ? new Date(fromIso) : null; const to = toIso ? new Date(toIso) : null; let sum = 0; gl.forEach(j=>{ try{ const jdate = new Date(j.date || j.postedAt || j.createdAt || ''); if(from && jdate < from) return; if(to && jdate > to) return; (j.lines||[]).forEach(line=>{ const acct = (line.account||'').toString(); if(accountList.includes(acct)) sum += signedLineAmount(line); }); }catch(e){} }); return sum; }
+
+    // compute net profit for period using Income Statement mappings if present
+    function computeNetProfit(fromIso,toIso){ try{ const mapsRaw = localStorage.getItem(INCOME_MAP_KEY); if(!mapsRaw) return 0; const incMaps = JSON.parse(mapsRaw); const revenueAccounts = incMaps.revenue || []; const cogsAccounts = incMaps.cogs || []; const opexAccounts = incMaps.opex || []; const otherInc = incMaps.other_income || []; const otherExp = incMaps.other_expense || [];
+      const gl = getGL(); let revenue=0,cogs=0,opex=0,othInc=0,othExp=0; gl.forEach(j=>{ try{ const jdate = new Date(j.date || j.postedAt || j.createdAt || ''); if(fromIso && jdate < new Date(fromIso)) return; if(toIso && jdate > new Date(toIso)) return; (j.lines||[]).forEach(line=>{ const acct = (line.account||'').toString(); const amt = signedLineAmount(line); if(revenueAccounts.includes(acct)) revenue += -amt; if(cogsAccounts.includes(acct)) cogs += amt; if(opexAccounts.includes(acct)) opex += amt; if(otherInc.includes(acct)) othInc += -amt; if(otherExp.includes(acct)) othExp += amt; }); }catch(e){} }); const net = (revenue - cogs - opex) + (othInc - othExp); return net; }catch(e){ return 0 } }
+
+    function format(v){ const n = Number(v||0); return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) }
+
+    function buildStatement(){ const from = $id('fromDate')?.value; const to = $id('toDate')?.value; // opening equity = balances before 'from'
+      const openingRetained = balanceForAccounts(mappings.retained || [], null, (from ? new Date(new Date(from).getTime() - 1).toISOString() : null));
+      const openingContrib = balanceForAccounts(mappings.contribution || [], null, (from ? new Date(new Date(from).getTime() - 1).toISOString() : null));
+      const openingDist = balanceForAccounts(mappings.distribution || [], null, (from ? new Date(new Date(from).getTime() - 1).toISOString() : null));
+
+      const netProfit = computeNetProfit(from,to);
+      const contribDuring = balanceForAccounts(mappings.contribution || [], from, to);
+      const distDuring = balanceForAccounts(mappings.distribution || [], from, to);
+      // retained earnings movement = net profit + prior adjustments - distributions
+      const retainedDuring = netProfit; // simplified: assume net profit flows to retained
+
+      const closingRetained = openingRetained + retainedDuring;
+      const closingContrib = openingContrib + contribDuring;
+      const closingDist = openingDist + distDuring;
+      const closingEquity = closingRetained + closingContrib - closingDist; // simplistic aggregation
+
+      const tbody = $id('equityTable').querySelector('tbody'); tbody.innerHTML = '';
+      tbody.appendChild(rowEl('Opening Retained Earnings', openingRetained));
+      tbody.appendChild(rowEl('Opening Owner Contributions', openingContrib));
+      tbody.appendChild(rowEl('Opening Distributions (cum.)', openingDist));
+      tbody.appendChild(rowEl('---', ''));
+      tbody.appendChild(rowEl('Net Profit for the period', netProfit));
+      tbody.appendChild(rowEl('Owner Contributions during period', contribDuring));
+      tbody.appendChild(rowEl('Distributions / Dividends during period', distDuring));
+      tbody.appendChild(rowEl('---', ''));
+      tbody.appendChild(rowEl('Closing Retained Earnings', closingRetained));
+      tbody.appendChild(rowEl('Closing Owner Contributions', closingContrib));
+      tbody.appendChild(rowEl('Closing Distributions (cum.)', closingDist));
+      $id('closingEquity').textContent = format(closingEquity);
+    }
+
+    function rowEl(label, val){ const tr = document.createElement('tr'); tr.innerHTML = `<td>${label}</td><td class="right">${val === '' ? '' : format(val)}</td>`; return tr }
+
+    function exportCSV(){ const from = $id('fromDate')?.value; const to = $id('toDate')?.value; const rows = [];
+      const tbody = $id('equityTable').querySelectorAll('tbody tr'); tbody.forEach(r=>{ const cols = r.querySelectorAll('td'); rows.push([cols[0].textContent, cols[1].textContent].join(',')); }); const csv = rows.join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'statement_of_changes_in_equity.csv'; a.click(); URL.revokeObjectURL(url); }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      try{
+        loadMappings();
+        $id('runBtn').addEventListener('click', buildStatement);
+        $id('addMap').addEventListener('click', addMapping);
+        $id('clearMaps').addEventListener('click', clearMappings);
+        $id('exportCsv').addEventListener('click', exportCSV);
+        // sensible defaults: last financial year
+        const today = new Date(); const start = new Date(today.getFullYear()-1,0,1); const end = new Date(today.getFullYear()-1,11,31);
+        $id('fromDate').value = start.toISOString().slice(0,10); $id('toDate').value = end.toISOString().slice(0,10);
+        buildStatement();
+      }catch(err){ console.error('Init error', err); alert('Statement of Changes init error — check console'); }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Projection Reports — ThinkShip ERP</title>
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#ffffff 0%, #f3fff9 100%);
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0f172a;
+      --brand-start:#0ea5a4; /* mint/teal accent */
+      --brand-end:#059669;
+      --accent:#059669;
+      --shadow: 0 10px 30px rgba(2,6,23,0.06);
+      --radius: 14px;
+      --mono: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    }
+    *{box-sizing:border-box}
+    body{font-family:var(--mono);margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0;font-weight:800}
+    .muted{color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border:1px solid rgba(5,150,105,0.06)}
+    input,select{padding:10px;border-radius:10px;border:1px solid #e6edf3;font-size:14px}
+    .btn{padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-start),var(--brand-end));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--brand-end)}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#f6fffb}
+    .right{text-align:right}
+    .muted-sm{font-size:12px;color:var(--muted)}
+    .section-title{font-weight:700;margin:0 0 8px}
+    .chart-wrap{height:260px;padding:12px;border-radius:12px;background:linear-gradient(180deg,#f0fffa,#ecfdf5);}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Projection Reports</h1>
+        <div class="muted">Create financial projections from budgets or historical actuals. Scenario compare and exportable output.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost small" id="exportCsv">Export CSV</button>
+        <button class="btn btn-primary small" id="runBtn">Run Projection</button>
+      </div>
+    </header>
+
+    <div class="card" style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <label class="muted-sm">Base on</label>
+      <select id="baseOn"><option value="budget">Budget</option><option value="actual">Actual</option></select>
+      <label class="muted-sm">Selection</label>
+      <select id="selection"></select>
+      <label class="muted-sm">Annual growth %</label>
+      <input id="growthRate" type="number" step="0.01" value="5" style="width:120px" />
+      <label class="muted-sm">Years</label>
+      <input id="years" type="number" min="1" max="10" value="3" style="width:80px" />
+      <label class="muted-sm">Mode</label>
+      <select id="mode"><option value="annual">Annual</option><option value="monthly">Monthly</option></select>
+      <div style="margin-left:auto;display:flex;gap:8px"><button class="btn btn-ghost small" id="addScenarioBtn">Add Scenario</button><button class="btn btn-ghost small" id="clearScenarios">Clear Scenarios</button></div>
+    </div>
+
+    <div class="grid">
+      <main>
+        <div class="card">
+          <h3 class="section-title">Scenarios</h3>
+          <div class="muted-sm">Create multiple scenarios with different growth rates to compare outcomes.</div>
+          <div style="margin-top:12px"><table id="scenariosTable"><thead><tr><th>Name</th><th class="right">Growth %</th><th class="right">Years</th><th class="right">Actions</th></tr></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Projection Output</h3>
+          <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+            <div class="muted-sm">Chart and table of projected totals per year (or per month if monthly mode).</div>
+            <div>
+              <label class="muted-sm">Currency</label>
+              <select id="currency"><option>TSH</option><option>USD</option></select>
+            </div>
+          </div>
+
+          <div style="margin-top:12px" class="chart-wrap"><canvas id="projChart" width="800" height="240"></canvas></div>
+          <table id="projTable"><thead><tr><th>Period</th><th class="right">Projected Total</th></tr></thead><tbody></tbody></table>
+        </div>
+      </main>
+
+      <aside>
+        <div class="card">
+          <h3 class="section-title">Settings & Notes</h3>
+          <div class="muted-sm">Projections use budgets (key <code>ts_demo_budgets_v1</code>) or actuals computed from GL (<code>ts_demo_gl_v1</code>). For "Actual" base, totals are summed for the latest available year and used as starting point.</div>
+          <div style="margin-top:12px"><button class="btn btn-ghost small" id="seedScenarios">Seed Example Scenario</button></div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Scenarios Export</h3>
+          <div class="muted-sm">Export scenarios for further analysis.</div>
+          <div style="margin-top:12px"><button class="btn btn-primary small" id="exportScenarios">Export Scenarios</button></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const BUD_KEY = 'ts_demo_budgets_v1';
+    const MAP_KEY = 'ts_demo_budget_mappings_v1';
+    const GL_KEY = 'ts_demo_gl_v1';
+    const SCEN_KEY = 'ts_demo_projection_scenarios_v1';
+
+    let budgets = [];
+    let mappings = {};
+    let scenarios = []; // {id,name,baseOn,selection,growth,years,mode}
+
+    function $id(id){ return document.getElementById(id) }
+    function genId(p='s'){ return p + Math.random().toString(36).slice(2,9) }
+
+    function loadData(){ try{ budgets = JSON.parse(localStorage.getItem(BUD_KEY)||'[]') }catch(e){ budgets=[] }
+      try{ mappings = JSON.parse(localStorage.getItem(MAP_KEY)||'{}') }catch(e){ mappings = {} }
+      try{ scenarios = JSON.parse(localStorage.getItem(SCEN_KEY)||'[]') }catch(e){ scenarios = [] }
+      populateSelection(); renderScenarios(); }
+
+    function populateSelection(){ const sel = $id('selection'); sel.innerHTML = ''; const base = $id('baseOn').value; if(base === 'budget'){ sel.appendChild(opt('', '-- Select Budget --')); budgets.forEach(b=> sel.appendChild(opt(b.id, b.year + ' — ' + b.dept + ' — ' + Number(b.amount).toLocaleString()))); } else { sel.appendChild(opt('all','All Actuals (latest year)')); }
+    }
+
+    function opt(v,t){ const o=document.createElement('option'); o.value=v; o.textContent=t; return o }
+
+    function getGL(){ try{ return JSON.parse(localStorage.getItem(GL_KEY) || '[]') }catch(e){ return [] } }
+
+    function computeBaseTotalFromBudget(bid, mode){ const b = budgets.find(x=> x.id===bid); if(!b) return 0; if(mode === 'annual') return Number(b.amount||0); if(mode === 'monthly') return Number(b.amount||0)/12; return 0 }
+
+    function computeBaseTotalFromActuals(mode){ // sum totals for latest year across GL
+      const gl = getGL(); if(gl.length===0) return 0; const years = gl.map(j=> new Date(j.date||j.postedAt||j.createdAt||'').getFullYear()).filter(Boolean); const latest = Math.max(...years); let total = 0; gl.forEach(j=>{ const d = new Date(j.date||j.postedAt||j.createdAt||''); if(d.getFullYear() !== latest) return; (j.lines||[]).forEach(line=>{ // treat debit positive
+            if(line.dc === 'debit') total += Number(line.amount||0); else total -= Number(line.amount||0); }); }); if(mode==='annual') return total; return total/12 }
+
+    function addScenario(){ const baseOn = $id('baseOn').value; const selection = $id('selection').value; const growth = parseFloat($id('growthRate').value)||0; const years = parseInt($id('years').value)||3; const mode = $id('mode').value; if(baseOn==='budget' && !selection){ alert('Select a budget'); return; }
+      const s = { id: genId(), name: (baseOn==='budget'? ('Budget: '+ (budgets.find(b=>b.id===selection)?.dept || selection)) : 'Actuals'), baseOn, selection, growth, years, mode };
+      scenarios.push(s); localStorage.setItem(SCEN_KEY, JSON.stringify(scenarios)); renderScenarios(); runProjection(); }
+
+    function renderScenarios(){ const tbody = $id('scenariosTable').querySelector('tbody'); tbody.innerHTML=''; scenarios.forEach(s=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(s.name)}</td><td class="right">${s.growth}%</td><td class="right">${s.years}</td><td class="right"><button class="btn btn-ghost small" onclick="removeScenario('${s.id}')">Remove</button></td>`; tbody.appendChild(tr); }); }
+    function removeScenario(id){ scenarios = scenarios.filter(s=> s.id !== id); localStorage.setItem(SCEN_KEY, JSON.stringify(scenarios)); renderScenarios(); runProjection(); }
+    function clearScenarios(){ if(!confirm('Clear scenarios?')) return; scenarios=[]; localStorage.setItem(SCEN_KEY, JSON.stringify(scenarios)); renderScenarios(); runProjection(); }
+
+    function runProjection(){ // build combined projection (for now single scenario charting first scenario or aggregate)
+      if(scenarios.length===0){ clearOutput(); return; }
+      const mode = scenarios[0].mode; const currency = $id('currency').value; const periods = []; const rows = [];
+      // if monthly and years N -> months = N*12
+      const years = Math.max(...scenarios.map(s=>s.years)); const months = years * 12;
+
+      // compute base totals per scenario
+      const series = scenarios.map(s=>{ let base = 0; if(s.baseOn === 'budget'){ base = computeBaseTotalFromBudget(s.selection, s.mode); } else { base = computeBaseTotalFromActuals(s.mode); } // produce array of period totals
+        const out = []; if(s.mode === 'annual'){ let cur = base; for(let y=1;y<=s.years;y++){ cur = cur * (1 + s.growth/100); out.push({period: y, value: cur}); } } else { // monthly
+          let cur = base; const monthsLocal = s.years * 12; for(let m=1;m<=monthsLocal;m++){ cur = cur * (1 + s.growth/100/12); out.push({period: m, value: cur}); } } return {scenario: s, data: out}; });
+
+      // For display, pick the largest time axis (years or months)
+      drawProjectionChart(series);
+      renderProjectionTable(series);
+    }
+
+    function drawProjectionChart(series){ const canvas = $id('projChart'); if(!canvas) return; const ctx = canvas.getContext('2d'); const w = canvas.width; const h = canvas.height; ctx.clearRect(0,0,w,h);
+      // Build labels based on first series
+      const s0 = series[0]; const len = s0.data.length; const padding = 40; const maxVal = Math.max(...series.flatMap(s=> s.data.map(d=> Math.abs(d.value))),1);
+      // draw per scenario as line
+      const colors = ['rgba(5,150,105,0.95)','rgba(6,182,212,0.95)','rgba(14,165,233,0.95)','rgba(99,102,241,0.95)'];
+      series.forEach((sidx,si)=>{
+        ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = colors[si % colors.length]; sidx.data.forEach((pt,i)=>{ const x = padding + (i * ((w-padding*2)/(len-1||1))); const y = h - 30 - ((Math.abs(pt.value)/maxVal) * (h - 80)); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); ctx.stroke(); // points
+          ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fillStyle = colors[si % colors.length]; ctx.fill(); });
+      });
+      // legend
+      series.forEach((s, i)=>{ ctx.fillStyle = colors[i % colors.length]; ctx.fillRect(w-220, 12 + i*18, 12, 10); ctx.fillStyle = '#374151'; ctx.font='12px Inter'; ctx.fillText(s.scenario.name, w-200, 22 + i*18); });
+    }
+
+    function renderProjectionTable(series){ const tbody = $id('projTable').querySelector('tbody'); tbody.innerHTML=''; // show aggregated for first scenario for simplicity
+      const s0 = series[0]; s0.data.forEach(pt=>{ const tr = document.createElement('tr'); tr.innerHTML = `<td>${s0.scenario.mode === 'annual' ? 'Year +' + pt.period : 'Month +' + pt.period}</td><td class="right">${Number(pt.value).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>`; tbody.appendChild(tr); }); }
+
+    function clearOutput(){ const canvas = $id('projChart'); if(canvas) canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height); $id('projTable').querySelector('tbody').innerHTML = ''; }
+
+    function seedExample(){ const s = { id: genId(), name: 'Conservative (5%)', baseOn: 'budget', selection: budgets[0] ? budgets[0].id : '', growth: 5, years: 3, mode: 'annual' }; scenarios.push(s); localStorage.setItem(SCEN_KEY, JSON.stringify(scenarios)); renderScenarios(); runProjection(); }
+
+    function exportScenarios(){ const blob = new Blob([JSON.stringify(scenarios, null, 2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='scenarios.json'; a.click(); URL.revokeObjectURL(url); }
+
+    function exportCSV(){ // export first scenario table
+      if(scenarios.length===0) return alert('No scenarios'); const s = scenarios[0]; const rows = [['Period,ProjectedTotal']]; const series = []; if(s.baseOn==='budget'){ const base = computeBaseTotalFromBudget(s.selection, s.mode); let cur = base; if(s.mode==='annual'){ for(let y=1;y<=s.years;y++){ cur = cur * (1 + s.growth/100); rows.push([y, cur].join(',')) } } else { for(let m=1;m<=s.years*12;m++){ cur = cur * (1 + s.growth/100/12); rows.push([m, cur].join(',')); } } } else { // actual
+        const base = computeBaseTotalFromActuals(s.mode); let cur = base; if(s.mode==='annual'){ for(let y=1;y<=s.years;y++){ cur = cur * (1 + s.growth/100); rows.push([y, cur].join(',')) } } else { for(let m=1;m<=s.years*12;m++){ cur = cur * (1 + s.growth/100/12); rows.push([m, cur].join(',')); } } }
+      const csv = rows.join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='projection.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      loadData();
+      $id('baseOn').addEventListener('change', populateSelection);
+      $id('runBtn').addEventListener('click', runProjection);
+      $id('addScenarioBtn').addEventListener('click', addScenario);
+      $id('clearScenarios').addEventListener('click', clearScenarios);
+      $id('seedScenarios').addEventListener('click', seedExample);
+      $id('exportScenarios').addEventListener('click', exportScenarios);
+      $id('exportCsv').addEventListener('click', exportCSV);
+      $id('selection').addEventListener('change', ()=>{/* noop */});
+      // initial UI
+      populateSelection(); renderScenarios(); clearOutput();
+    });
+  </script>
+</body>
+</html>

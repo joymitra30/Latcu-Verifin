@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Accounts Payable & Receivable - ThinkShip ERP</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--muted:#6b7280;--brand:#6366f1}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a;margin:0;padding:20px}
+    .container{max-width:1200px;margin:0 auto}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    h1{font-size:20px;margin:0}
+    .muted{color:var(--muted)}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .tabs{display:flex;gap:8px;margin-top:12px}
+    .tab{padding:8px 12px;border-radius:8px;background:#fff;border:1px solid rgba(15,23,42,0.04);cursor:pointer}
+    .tab.active{background:linear-gradient(90deg,#eef2ff,#fff);border-color:rgba(99,102,241,0.18);color:var(--brand);font-weight:700}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 24px rgba(15,23,42,0.06);margin-top:12px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text], input[type=date], input[type=number], select, textarea{width:100%;padding:10px;border:1px solid #e6edf3;border-radius:8px;font-size:14px}
+    textarea{min-height:64px}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#fbfdff}
+    .right{text-align:right}
+    .small{font-size:13px;padding:6px 8px;border-radius:8px}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#f1f5f9;color:#0f172a;font-weight:600;font-size:12px}
+    .status.pending{background:#fffbeb;color:#92400e}
+    .status.open{background:#ecfdf5;color:#065f46}
+    .status.closed{background:#eef2ff;color:#1e40af}
+    .split{display:flex;gap:12px}
+    @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Accounts Payable & Receivable</h1>
+        <div class="muted">Manage vendor bills, customer invoices and payments. All posted transactions create GL entries and link to reports.</div>
+      </div>
+      <div>
+        <button class="small" onclick="exportAll()">Export CSV</button>
+      </div>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <div class="tab active" data-tab="ap" onclick="showTab('ap')">Accounts Payable (AP)</div>
+      <div class="tab" data-tab="ar" onclick="showTab('ar')">Accounts Receivable (AR)</div>
+      <div class="tab" data-tab="reports" onclick="showTab('reports')">Reports</div>
+    </div>
+
+    <!-- AP -->
+    <section id="ap" class="card">
+      <h3>Vendor Bills & Payments (AP)</h3>
+      <div class="split" style="align-items:flex-start">
+        <div style="flex:1">
+          <form id="billForm" onsubmit="return saveBill(event)">
+            <div class="grid2">
+              <div>
+                <label for="billDate">Bill Date</label>
+                <input id="billDate" type="date" required />
+              </div>
+              <div>
+                <label for="billDue">Due Date</label>
+                <input id="billDue" type="date" required />
+              </div>
+            </div>
+
+            <div style="margin-top:10px" class="grid2">
+              <div>
+                <label for="vendorSelect">Vendor</label>
+                <select id="vendorSelect"></select>
+                <div style="margin-top:6px"><input id="newVendorName" type="text" placeholder="Add vendor name and press +" /><button type="button" class="small ghost" onclick="addVendor()">+</button></div>
+              </div>
+              <div>
+                <label for="billRef">Reference</label>
+                <input id="billRef" type="text" placeholder="e.g. BILL-1001" />
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label for="billLinkedAccount">Expense / Item Account</label>
+              <select id="billLinkedAccount"></select>
+            </div>
+
+            <div style="margin-top:10px">
+              <label>Line Items</label>
+              <table id="billLinesTable"><thead><tr><th>Desc</th><th>Account</th><th class="right">Amount</th><th></th></tr></thead><tbody></tbody><tfoot><tr><th>Total</th><th></th><th class="right" id="billTotal">0</th><th></th></tr></tfoot></table>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <input id="billLineDesc" type="text" placeholder="Item description" />
+                <select id="billLineAccount"></select>
+                <input id="billLineAmount" type="number" step="0.01" placeholder="Amount" />
+                <button type="button" class="small" onclick="addBillLine()">Add Line</button>
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label for="billNotes">Notes</label>
+              <textarea id="billNotes"></textarea>
+            </div>
+
+            <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+              <button type="button" class="small ghost" onclick="resetBillForm()">Reset</button>
+              <button type="submit" class="small">Save Bill (Open)</button>
+            </div>
+          </form>
+
+          <div style="margin-top:18px">
+            <h4>Vendor Bills</h4>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <select id="apFilterStatus" onchange="renderBills()"><option value="all">All</option><option value="open">Open</option><option value="paid">Paid</option></select>
+              <input id="apSearch" type="text" placeholder="search vendor/ref/desc" oninput="renderBills()" style="padding:8px;border-radius:8px;border:1px solid #eef2f7" />
+            </div>
+            <table id="billsTable"><thead><tr><th>Date</th><th>Vendor</th><th>Ref</th><th class="right">Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <aside style="width:360px">
+          <div style="margin-bottom:12px">
+            <h4>Make Payment</h4>
+            <label for="payBillSelect">Bill</label>
+            <select id="payBillSelect"></select>
+            <label for="payAccount" style="margin-top:8px">Pay From (Cash/Bank)</label>
+            <select id="payAccount"></select>
+            <label for="payAmount" style="margin-top:8px">Amount</label>
+            <input id="payAmount" type="number" step="0.01" />
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="small" onclick="payBill()">Pay</button>
+              <button class="small ghost" onclick="resetPayment()">Reset</button>
+            </div>
+          </div>
+
+          <div>
+            <h4>Vendors</h4>
+            <div id="vendorsList"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- AR -->
+    <section id="ar" class="card" style="display:none">
+      <h3>Customer Invoices & Receipts (AR)</h3>
+      <div class="split">
+        <div style="flex:1">
+          <form id="invoiceForm" onsubmit="return saveInvoice(event)">
+            <div class="grid2">
+              <div>
+                <label for="invDate">Invoice Date</label>
+                <input id="invDate" type="date" required />
+              </div>
+              <div>
+                <label for="invDue">Due Date</label>
+                <input id="invDue" type="date" required />
+              </div>
+            </div>
+
+            <div style="margin-top:10px" class="grid2">
+              <div>
+                <label for="customerSelect">Customer</label>
+                <select id="customerSelect"></select>
+                <div style="margin-top:6px"><input id="newCustomerName" type="text" placeholder="Add customer and press +" /><button type="button" class="small ghost" onclick="addCustomer()">+</button></div>
+              </div>
+              <div>
+                <label for="invRef">Reference</label>
+                <input id="invRef" type="text" placeholder="e.g. INV-2001" />
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label>Line Items</label>
+              <table id="invLinesTable"><thead><tr><th>Description</th><th>Account</th><th class="right">Amount</th><th></th></tr></thead><tbody></tbody><tfoot><tr><th>Total</th><th></th><th class="right" id="invTotal">0</th><th></th></tr></tfoot></table>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <input id="invLineDesc" type="text" placeholder="Item description" />
+                <select id="invLineAccount"></select>
+                <input id="invLineAmount" type="number" step="0.01" placeholder="Amount" />
+                <button type="button" class="small" onclick="addInvLine()">Add Line</button>
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label for="invNotes">Notes</label>
+              <textarea id="invNotes"></textarea>
+            </div>
+
+            <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+              <button type="button" class="small ghost" onclick="resetInvoiceForm()">Reset</button>
+              <button type="submit" class="small">Save Invoice (Open)</button>
+            </div>
+          </form>
+
+          <div style="margin-top:18px">
+            <h4>Customer Invoices</h4>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <select id="arFilterStatus" onchange="renderInvoices()"><option value="all">All</option><option value="open">Open</option><option value="paid">Paid</option></select>
+              <input id="arSearch" type="text" placeholder="search customer/ref/desc" oninput="renderInvoices()" style="padding:8px;border-radius:8px;border:1px solid #eef2f7" />
+            </div>
+            <table id="invoicesTable"><thead><tr><th>Date</th><th>Customer</th><th>Ref</th><th class="right">Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <aside style="width:360px">
+          <div style="margin-bottom:12px">
+            <h4>Receive Payment</h4>
+            <label for="rcvInvSelect">Invoice</label>
+            <select id="rcvInvSelect"></select>
+            <label for="rcvAccount" style="margin-top:8px">Deposit To (Cash/Bank)</label>
+            <select id="rcvAccount"></select>
+            <label for="rcvAmount" style="margin-top:8px">Amount</label>
+            <input id="rcvAmount" type="number" step="0.01" />
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="small" onclick="receivePayment()">Receive</button>
+              <button class="small ghost" onclick="resetReceive()">Reset</button>
+            </div>
+          </div>
+
+          <div>
+            <h4>Customers</h4>
+            <div id="customersList"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Reports -->
+    <section id="reports" class="card" style="display:none">
+      <h3>AP / AR Reports</h3>
+      <div style="margin-top:10px" class="grid2">
+        <div>
+          <h4>AP Aging (Days)</h4>
+          <table id="apAgingTable"><thead><tr><th>Vendor</th><th class="right">Current</th><th class="right">1-30</th><th class="right">31-60</th><th class="right">61-90</th><th class="right">90+</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div>
+          <h4>AR Aging (Days)</h4>
+          <table id="arAgingTable"><thead><tr><th>Customer</th><th class="right">Current</th><th class="right">1-30</th><th class="right">31-60</th><th class="right">61-90</th><th class="right">90+</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // storage keys
+    const AP_KEY = 'ts_demo_ap_v1';
+    const AR_KEY = 'ts_demo_ar_v1';
+    const VEND_KEY = 'ts_demo_vendors_v1';
+    const CUST_KEY = 'ts_demo_customers_v1';
+    const GL_KEY = 'ts_demo_gl_v1';
+    const COA_KEY = 'coa_demo_accounts_v1';
+
+    let bills = [], invoices = [], vendors = [], customers = [], journal = [], coa = [];
+
+    function genId(prefix='x'){ return prefix+Math.random().toString(36).slice(2,9) }
+
+    function showTab(tab){ document.querySelectorAll('section.card').forEach(s=> s.style.display='none'); document.getElementById(tab).style.display='block'; document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.getAttribute('data-tab')===tab)); if(tab==='reports') renderAging(); }
+
+    // load data
+    function loadAll(){ try{ bills = JSON.parse(localStorage.getItem(AP_KEY)||'[]') }catch(e){ bills=[] }
+      try{ invoices = JSON.parse(localStorage.getItem(AR_KEY)||'[]') }catch(e){ invoices=[] }
+      try{ vendors = JSON.parse(localStorage.getItem(VEND_KEY)||'[]') }catch(e){ vendors=[] }
+      try{ customers = JSON.parse(localStorage.getItem(CUST_KEY)||'[]') }catch(e){ customers=[] }
+      try{ journal = JSON.parse(localStorage.getItem(GL_KEY)||'[]') }catch(e){ journal=[] }
+      try{ coa = JSON.parse(localStorage.getItem(COA_KEY)||'[]') }catch(e){ coa=[] }
+      populateSelectors(); renderBills(); renderInvoices(); renderVendorsList(); renderCustomersList(); }
+
+    function populateSelectors(){ const vs = document.getElementById('vendorSelect'); vs.innerHTML = '<option value="">-- Select vendor --</option>'; vendors.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=v.name; vs.appendChild(o) });
+      const cs = document.getElementById('customerSelect'); cs.innerHTML = '<option value="">-- Select customer --</option>'; customers.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; cs.appendChild(o) });
+      const accounts = ['billLineAccount','billLinkedAccount','payAccount','payAccount','invLineAccount','rcvAccount','invLineAccount','billLineAccount','billLinkedAccount'];
+      const uniq = Array.from(new Set(accounts)); uniq.forEach(id=>{ const el = document.getElementById(id); if(!el) return; el.innerHTML = '<option value="">-- Select account --</option>'; coa.forEach(a=>{ const o=document.createElement('option'); o.value = a.code || a.id; o.textContent = (a.code? a.code+' — ':'')+a.name; el.appendChild(o) }) });
+      // payBillSelect, payAccount, rcvInvSelect, rcvAccount
+      const payBill = document.getElementById('payBillSelect'); payBill.innerHTML = '<option value="">-- Select bill --</option>'; bills.filter(b=>b.status==='open').forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.textContent = b.ref+' — '+b.vendorName+' — '+Number(b.total).toLocaleString(); payBill.appendChild(o) });
+      const rcvInv = document.getElementById('rcvInvSelect'); rcvInv.innerHTML = '<option value="">-- Select invoice --</option>'; invoices.filter(i=>i.status==='open').forEach(i=>{ const o=document.createElement('option'); o.value=i.id; o.textContent = i.ref+' — '+i.customerName+' — '+Number(i.total).toLocaleString(); rcvInv.appendChild(o) });
+    }
+
+    // ---------- Vendors / Customers ----------
+    function addVendor(){ const name = document.getElementById('newVendorName').value.trim(); if(!name) return; const v = { id: genId('v'), name }; vendors.push(v); localStorage.setItem(VEND_KEY, JSON.stringify(vendors)); document.getElementById('newVendorName').value=''; loadAll(); }
+    function addCustomer(){ const name = document.getElementById('newCustomerName').value.trim(); if(!name) return; const c = { id: genId('c'), name }; customers.push(c); localStorage.setItem(CUST_KEY, JSON.stringify(customers)); document.getElementById('newCustomerName').value=''; loadAll(); }
+    function renderVendorsList(){ const el = document.getElementById('vendorsList'); el.innerHTML=''; vendors.forEach(v=> el.innerHTML += '<div>'+escapeHtml(v.name)+'</div>'); }
+    function renderCustomersList(){ const el = document.getElementById('customersList'); el.innerHTML=''; customers.forEach(c=> el.innerHTML += '<div>'+escapeHtml(c.name)+'</div>'); }
+
+    // ---------- AP: Bills ----------
+    let billLines = [];
+    function addBillLine(){ const desc = document.getElementById('billLineDesc').value.trim(); const acc = document.getElementById('billLineAccount').value; const amt = parseFloat(document.getElementById('billLineAmount').value||0); if(!desc || !acc || amt<=0){ alert('Provide description, account and amount'); return } billLines.push({desc,account:acc,amount:amt}); renderBillLines(); document.getElementById('billLineDesc').value=''; document.getElementById('billLineAmount').value=''; }
+    function renderBillLines(){ const tbody = document.querySelector('#billLinesTable tbody'); tbody.innerHTML=''; let total=0; billLines.forEach((l,idx)=>{ const acc = coa.find(a=> (a.code||a.id)===l.account); const label = acc ? ((acc.code?acc.code+' — ':'')+acc.name) : l.account; const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(l.desc)}</td><td>${label}</td><td class="right">${Number(l.amount).toLocaleString()}</td><td style="text-align:right"><button class="small ghost" onclick="removeBillLine(${idx})">Remove</button></td>`; tbody.appendChild(tr); total += l.amount; }); document.getElementById('billTotal').textContent = Number(total).toLocaleString(); }
+    function removeBillLine(i){ billLines.splice(i,1); renderBillLines(); }
+
+    function saveBill(e){ if(e) e.preventDefault(); const date = document.getElementById('billDate').value; const due = document.getElementById('billDue').value; const vendorId = document.getElementById('vendorSelect').value; const vendor = vendors.find(v=>v.id===vendorId); const ref = document.getElementById('billRef').value.trim() || 'B-'+Math.floor(Math.random()*9000+1000); const notes = document.getElementById('billNotes').value; if(!date || !due || !vendor){ alert('Please provide date, due date and vendor'); return false } if(billLines.length<1){ alert('Add at least one line'); return false } const total = billLines.reduce((s,l)=>s+l.amount,0); const bill = { id: genId('b'), date, due, vendorId, vendorName: vendor.name, ref, lines: billLines.slice(), notes, total, status:'open', createdAt: new Date().toISOString() }; bills.push(bill); localStorage.setItem(AP_KEY, JSON.stringify(bills)); billLines = []; renderBillLines(); resetBillForm(); loadAll(); alert('Bill saved (open)'); return false; }
+
+    function resetBillForm(){ document.getElementById('billForm').reset(); billLines=[]; renderBillLines(); }
+
+    function renderBills(){ const tbody = document.querySelector('#billsTable tbody'); tbody.innerHTML=''; const status = document.getElementById('apFilterStatus').value; const q = (document.getElementById('apSearch').value||'').toLowerCase(); bills.slice().reverse().forEach(b=>{ if(status!=='all' && ((status==='open' && b.status!=='open') || (status==='paid' && b.status!=='paid'))) return; if(q && !(b.vendorName||'').toLowerCase().includes(q) && !(b.ref||'').toLowerCase().includes(q) && !(b.notes||'').toLowerCase().includes(q)) return; const tr=document.createElement('tr'); tr.innerHTML = `<td>${b.date}</td><td>${escapeHtml(b.vendorName)}</td><td>${escapeHtml(b.ref)}</td><td class="right">${Number(b.total).toLocaleString()}</td><td>${b.due}</td><td><span class="pill status ${b.status}">${b.status}</span></td><td style="text-align:right">${b.status==='open'? '<button class="small" onclick="openPayModal(\''+b.id+'\')">Pay</button>' : '<button class="small ghost" onclick="viewJournal(\''+b.journalId+'\')">View GL</button>'}</td>`; tbody.appendChild(tr); }); populateSelectors(); }
+
+    function openPayModal(bid){ document.getElementById('payBillSelect').value = bid; const b = bills.find(x=>x.id===bid); document.getElementById('payAmount').value = b ? b.total : ''; }
+
+    function payBill(){ const bid = document.getElementById('payBillSelect').value; const payAcc = document.getElementById('payAccount').value; const amt = parseFloat(document.getElementById('payAmount').value||0); if(!bid || !payAcc || amt<=0){ alert('Select bill, pay account and amount'); return } const bill = bills.find(b=>b.id===bid); if(!bill) return; // allow partial
+      const remaining = (bill.paid||0); const paidSoFar = bill.paidAmount||0; const toPay = amt; // create GL entry: debit AP (liability) credit Cash/Bank
+      const apAccount = coa.find(a=> (a.name||'').toLowerCase().includes('accounts payable') || (a.code||'').toLowerCase().includes('payable')) || coa.find(a=> (a.type||'').toLowerCase()==='liability');
+      const cashAcc = coa.find(a=> (a.code||'').startsWith('11') || (a.name||'').toLowerCase().includes('cash')) || coa[0];
+      const lines = [ {account: apAccount? (apAccount.code||apAccount.id) : 'AP', dc:'debit', amount: toPay, desc: 'Payment of bill '+bill.ref}, {account: payAcc, dc:'credit', amount: toPay, desc: 'Paid from account'} ];
+      const entry = { id: genId('j'), date: new Date().toISOString().slice(0,10), ref: 'PAY-'+bill.ref, description: 'Payment for '+bill.ref, lines, totalDebit: toPay, totalCredit: toPay };
+      journal.push(entry); localStorage.setItem(GL_KEY, JSON.stringify(journal)); // mark bill
+      bill.paidAmount = (bill.paidAmount||0) + toPay; if(Math.abs(bill.paidAmount - bill.total) < 0.001) bill.status = 'paid'; bill.journalId = entry.id; localStorage.setItem(AP_KEY, JSON.stringify(bills)); loadAll(); alert('Payment posted and GL entry created'); }
+
+    // ---------- AR: Invoices ----------
+    let invLines = [];
+    function addInvLine(){ const desc = document.getElementById('invLineDesc').value.trim(); const acc = document.getElementById('invLineAccount').value; const amt = parseFloat(document.getElementById('invLineAmount').value||0); if(!desc || !acc || amt<=0){ alert('Provide description, account and amount'); return } invLines.push({desc,account:acc,amount:amt}); renderInvLines(); document.getElementById('invLineDesc').value=''; document.getElementById('invLineAmount').value=''; }
+    function renderInvLines(){ const tbody = document.querySelector('#invLinesTable tbody'); tbody.innerHTML=''; let total=0; invLines.forEach((l,idx)=>{ const acc = coa.find(a=> (a.code||a.id)===l.account); const label = acc ? ((acc.code?acc.code+' — ':'')+acc.name) : l.account; const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(l.desc)}</td><td>${label}</td><td class="right">${Number(l.amount).toLocaleString()}</td><td style="text-align:right"><button class="small ghost" onclick="removeInvLine(${idx})">Remove</button></td>`; tbody.appendChild(tr); total += l.amount; }); document.getElementById('invTotal').textContent = Number(total).toLocaleString(); }
+    function removeInvLine(i){ invLines.splice(i,1); renderInvLines(); }
+
+    function saveInvoice(e){ if(e) e.preventDefault(); const date = document.getElementById('invDate').value; const due = document.getElementById('invDue').value; const custId = document.getElementById('customerSelect').value; const customer = customers.find(c=>c.id===custId); const ref = document.getElementById('invRef').value.trim() || 'I-'+Math.floor(Math.random()*9000+1000); if(!date || !due || !customer){ alert('Please provide date, due date and customer'); return false } if(invLines.length<1){ alert('Add at least one line'); return false } const total = invLines.reduce((s,l)=>s+l.amount,0); const invoice = { id: genId('i'), date, due, customerId: custId, customerName: customer.name, ref, lines: invLines.slice(), notes: document.getElementById('invNotes').value, total, status:'open', createdAt: new Date().toISOString() }; invoices.push(invoice); localStorage.setItem(AR_KEY, JSON.stringify(invoices)); invLines=[]; renderInvLines(); resetInvoiceForm(); loadAll(); alert('Invoice saved (open)'); return false; }
+
+    function resetInvoiceForm(){ document.getElementById('invoiceForm').reset(); invLines=[]; renderInvLines(); }
+
+    function renderInvoices(){ const tbody = document.querySelector('#invoicesTable tbody'); tbody.innerHTML=''; const status = document.getElementById('arFilterStatus').value; const q = (document.getElementById('arSearch').value||'').toLowerCase(); invoices.slice().reverse().forEach(i=>{ if(status!=='all' && ((status==='open' && i.status!=='open') || (status==='paid' && i.status!=='paid'))) return; if(q && !(i.customerName||'').toLowerCase().includes(q) && !(i.ref||'').toLowerCase().includes(q) && !(i.notes||'').toLowerCase().includes(q)) return; const tr=document.createElement('tr'); tr.innerHTML = `<td>${i.date}</td><td>${escapeHtml(i.customerName)}</td><td>${escapeHtml(i.ref)}</td><td class="right">${Number(i.total).toLocaleString()}</td><td>${i.due}</td><td><span class="pill status ${i.status}">${i.status}</span></td><td style="text-align:right">${i.status==='open'? '<button class="small" onclick="openReceiveModal(\''+i.id+'\')">Receive</button>' : '<button class="small ghost" onclick="viewJournal(\''+i.journalId+'\')">View GL</button>'}</td>`; tbody.appendChild(tr); }); populateSelectors(); }
+
+    function openReceiveModal(iid){ document.getElementById('rcvInvSelect').value = iid; const inv = invoices.find(x=>x.id===iid); document.getElementById('rcvAmount').value = inv ? inv.total - (inv.receivedAmount||0) : ''; }
+
+    function receivePayment(){ const iid = document.getElementById('rcvInvSelect').value; const acc = document.getElementById('rcvAccount').value; const amt = parseFloat(document.getElementById('rcvAmount').value||0); if(!iid || !acc || amt<=0){ alert('Select invoice, account and amount'); return } const inv = invoices.find(i=>i.id===iid); if(!inv) return; // GL: debit cash/bank (acc), credit Accounts Receivable (AR liab)
+      const arAccount = coa.find(a=> (a.name||'').toLowerCase().includes('accounts receivable') || (a.code||'').toLowerCase().includes('receivable')) || coa.find(a=> (a.type||'').toLowerCase()==='asset');
+      const lines = [ {account: acc, dc:'debit', amount: amt, desc: 'Receipt for '+inv.ref}, {account: arAccount? (arAccount.code||arAccount.id) : 'AR', dc:'credit', amount: amt, desc: 'Reduce receivable '+inv.ref} ];
+      const entry = { id: genId('j'), date: new Date().toISOString().slice(0,10), ref: 'RCV-'+inv.ref, description: 'Receipt for '+inv.ref, lines, totalDebit: amt, totalCredit: amt };
+      journal.push(entry); localStorage.setItem(GL_KEY, JSON.stringify(journal)); inv.receivedAmount = (inv.receivedAmount||0) + amt; if(Math.abs(inv.receivedAmount - inv.total) < 0.001) inv.status = 'paid'; inv.journalId = entry.id; localStorage.setItem(AR_KEY, JSON.stringify(invoices)); loadAll(); alert('Payment recorded and GL entry created'); }
+
+    // ---------- GL view helper ----------
+    function viewJournal(jid){ if(!jid){ alert('No GL entry linked'); return } const j = journal.find(x=>x.id===jid); if(!j){ alert('Journal not found'); return } alert('Journal '+j.id+'\n'+ j.lines.map(l=> (l.account+' '+l.dc+' '+l.amount+' — '+(l.desc||''))).join('\n')); }
+
+    // ---------- Reports: Aging ----------
+    function renderAging(){ renderAgingTable(bills, 'apAgingTable', 'vendorName'); renderAgingTable(invoices, 'arAgingTable', 'customerName'); }
+    function renderAgingTable(items, tableId, nameKey){ const tbody = document.querySelector('#'+tableId+' tbody'); tbody.innerHTML=''; const today = new Date(); const buckets = item => {
+        const due = new Date(item.due); const diff = Math.floor((today - due)/(1000*60*60*24)); // days overdue
+        if(diff <= 0) return 'current'; if(diff <=30) return '1-30'; if(diff <=60) return '31-60'; if(diff <=90) return '61-90'; return '90+';
+      };
+      const groups = {}; items.forEach(it=>{ const key = it[nameKey] || '—'; if(!groups[key]) groups[key] = {current:0,'1-30':0,'31-60':0,'61-90':0,'90+':0}; const bal = (it.total - (it.paidAmount||0) - (it.receivedAmount||0)); if(bal<=0) return; const b = buckets(it); groups[key][b] += bal; }); Object.keys(groups).forEach(g=>{ const row = groups[g]; const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(g)}</td><td class="right">${Number(row['current']).toLocaleString()}</td><td class="right">${Number(row['1-30']).toLocaleString()}</td><td class="right">${Number(row['31-60']).toLocaleString()}</td><td class="right">${Number(row['61-90']).toLocaleString()}</td><td class="right">${Number(row['90+']).toLocaleString()}</td>`; tbody.appendChild(tr); }); }
+
+    // ---------- Utilities ----------
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    function exportAll(){ const rows=[]; bills.forEach(b=> rows.push(['BILL',b.date,b.vendorName,b.ref,b.total,b.status].join(','))); invoices.forEach(i=> rows.push(['INV',i.date,i.customerName,i.ref,i.total,i.status].join(','))); const csv = rows.join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='ap_ar_export.csv'; a.click(); URL.revokeObjectURL(url); }
+
+    document.addEventListener('DOMContentLoaded', ()=>{ loadAll(); });
+  </script>
+</body>
+</html>

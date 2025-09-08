@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Budget vs Actual — ThinkShip ERP</title>
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#f7fff7 0%, #ecfdf5 100%);
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0f172a;
+      --brand-start:#059669; /* green accent for budgeting */
+      --brand-end:#047857;
+      --accent:#059669;
+      --shadow: 0 10px 30px rgba(2,6,23,0.06);
+      --radius: 14px;
+      --mono: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    }
+    *{box-sizing:border-box}
+    body{font-family:var(--mono);margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    .wrap{max-width:1200px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0;font-weight:800}
+    .muted{color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border:1px solid rgba(5,150,105,0.06)}
+    input,select{padding:10px;border-radius:10px;border:1px solid #e6edf3;font-size:14px}
+    .btn{padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-start),var(--brand-end));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--brand-end)}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#f6fffb}
+    .right{text-align:right}
+    .muted-sm{font-size:12px;color:var(--muted)}
+    .section-title{font-weight:700;margin:0 0 8px}
+    .chart-wrap{height:240px;padding:12px;border-radius:12px;background:linear-gradient(180deg,#f0fdf9,#ecfdf5);}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Budget vs Actual</h1>
+        <div class="muted">Compare budgets to actuals by category/department. Monthly breakdown, variance and % used. Mappings tie budgets to COA codes.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost small" id="exportCsv">Export CSV</button>
+        <button class="btn btn-primary small" id="refreshBtn">Refresh</button>
+      </div>
+    </header>
+
+    <div class="card" style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <label class="muted-sm">Year</label>
+      <select id="viewYear"></select>
+      <label class="muted-sm">Currency</label>
+      <select id="viewCurrency"><option>TSH</option><option>USD</option></select>
+      <label class="muted-sm">Group By</label>
+      <select id="groupBy"><option value="dept">Department</option><option value="category">Category</option></select>
+      <div style="margin-left:auto"><button class="btn btn-primary small" id="runBtn">Run Report</button></div>
+    </div>
+
+    <div class="grid">
+      <main>
+        <div class="card">
+          <h3 class="section-title">Summary</h3>
+          <table id="bvaTable"><thead><tr><th>Budget</th><th class="right">Budget Amount</th><th class="right">Actual</th><th class="right">Variance</th><th class="right">% Used</th></tr></thead><tbody></tbody></table>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Monthly Breakdown (Selected Budget)</h3>
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+            <label class="muted-sm">Select Budget</label>
+            <select id="selectBudget"></select>
+            <div style="margin-left:auto"><button class="btn btn-ghost small" id="exportBudgetCsv">Export Budget CSV</button></div>
+          </div>
+          <div class="chart-wrap"><canvas id="monthlyChart" width="800" height="220"></canvas></div>
+          <table id="monthlyTable"><thead><tr><th>Month</th><th class="right">Budget</th><th class="right">Actual</th><th class="right">Variance</th></tr></thead><tbody></tbody></table>
+        </div>
+      </main>
+
+      <aside>
+        <div class="card">
+          <h3 class="section-title">Mappings & Controls</h3>
+          <div class="muted-sm">Budget → COA mappings are stored under <code>ts_demo_budget_mappings_v1</code>. Ensure budgets exist (key <code>ts_demo_budgets_v1</code>).</div>
+          <label style="margin-top:8px">Budget</label>
+          <select id="mapBudget"></select>
+          <label style="margin-top:8px">COA Account</label>
+          <input id="mapAccount" type="text" placeholder="e.g. 5000" />
+          <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-primary small" id="addMap">Add</button><button class="btn btn-ghost small" id="clearMaps">Clear</button></div>
+          <div style="margin-top:12px"><h4 class="muted-sm">Current mappings</h4><div id="mappingsList"></div></div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Quick Actions</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-ghost small" id="seedSample">Seed Sample Budgets</button>
+            <button class="btn btn-ghost small" id="clearBudgets">Clear Budgets</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Keys used across app
+    const BUD_KEY = 'ts_demo_budgets_v1';
+    const MAP_KEY = 'ts_demo_budget_mappings_v1';
+    const GL_KEY = 'ts_demo_gl_v1';
+
+    let budgets = [];
+    let mappings = {}; // {budgetId: [accountCodes...]}
+
+    function genId(p='x'){ return p + Math.random().toString(36).slice(2,9) }
+    function $id(id){ return document.getElementById(id) }
+
+    function loadData(){ try{ budgets = JSON.parse(localStorage.getItem(BUD_KEY)||'[]') }catch(e){ budgets = [] }
+      try{ mappings = JSON.parse(localStorage.getItem(MAP_KEY)||'{}') }catch(e){ mappings = {} }
+      populateSelectors(); renderSummary(); }
+
+    function populateSelectors(){ const vy = $id('viewYear'); if(!vy) return; vy.innerHTML = ''; const years = Array.from(new Set(budgets.map(b=>b.year))); if(years.length===0){ const y = new Date().getFullYear(); vy.appendChild(opt(y,y)); } else { years.sort().forEach(y=> vy.appendChild(opt(y,y))); }
+      const sel = $id('selectBudget'); sel.innerHTML = '<option value="">-- Select --</option>'; budgets.forEach(b=> sel.appendChild(opt(b.id, b.year + ' — ' + b.dept + ' — ' + Number(b.amount).toLocaleString())));
+      const mapBudget = $id('mapBudget'); mapBudget.innerHTML = '<option value="">-- Select --</option>'; budgets.forEach(b=> mapBudget.appendChild(opt(b.id, b.year + ' — ' + b.dept)));
+    }
+
+    function opt(v,t){ const o = document.createElement('option'); o.value = v; o.textContent = t; return o }
+
+    function getGL(){ try{ return JSON.parse(localStorage.getItem(GL_KEY) || '[]') }catch(e){ return [] } }
+
+    // compute actuals for a budget: sum of GL lines for mapped accounts within year
+    function computeActualForBudget(budgetId){ const b = budgets.find(x=> x.id === budgetId); if(!b) return 0; const year = Number(b.year); const mapped = mappings[budgetId] || []; if(mapped.length===0) return 0; const gl = getGL(); let sum = 0; gl.forEach(j=>{ try{ const jdate = new Date(j.date||j.postedAt||j.createdAt||''); if(jdate.getFullYear() !== year) return; (j.lines||[]).forEach(line=>{ const acct = (line.account||'').toString(); if(mapped.includes(acct)){ // debit-positive convention; treat revenue vs expense depending on sign — use absolute contribution
+                sum += (line.dc === 'debit' ? Number(line.amount||0) : -Number(line.amount||0)); } }); }catch(e){} }); return sum; }
+
+    function renderSummary(){ const tbody = $id('bvaTable').querySelector('tbody'); if(!tbody) return; tbody.innerHTML = ''; budgets.filter(b=> true).forEach(b=>{ const budgetAmt = Number(b.amount||0); const actual = computeActualForBudget(b.id); const variance = budgetAmt - actual; const pct = budgetAmt === 0 ? 0 : (actual / budgetAmt) * 100; const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(b.year + ' — ' + b.dept)}</td><td class="right">${Number(budgetAmt).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="right">${Number(actual).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="right">${Number(variance).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="right">${pct.toFixed(1)}%</td>`; tbody.appendChild(tr); }); }
+
+    // monthly breakdown: simple even allocation of annual budget across 12 months (can be replaced with monthly allocations)
+    function monthlyBudgetArray(budgetAmt){ const per = Number(budgetAmt || 0) / 12; const arr = []; for(let m=0;m<12;m++) arr.push(per); return arr; }
+
+    function computeMonthlyActualsForBudget(budgetId){ const b = budgets.find(x=> x.id===budgetId); if(!b) return new Array(12).fill(0); const year = Number(b.year); const mapped = mappings[budgetId] || []; const gl = getGL(); const months = new Array(12).fill(0);
+      gl.forEach(j=>{ try{ const jdate = new Date(j.date||j.postedAt||j.createdAt||''); if(jdate.getFullYear() !== year) return; const m = jdate.getMonth(); (j.lines||[]).forEach(line=>{ const acct = (line.account||'').toString(); if(mapped.includes(acct)){ months[m] += (line.dc === 'debit' ? Number(line.amount||0) : -Number(line.amount||0)); } }); }catch(e){} }); return months; }
+
+    function renderMonthly(budgetId){ const sel = $id('selectBudget'); if(!sel) return; const tbody = $id('monthlyTable').querySelector('tbody'); const chart = $id('monthlyChart'); if(!budgetId){ tbody.innerHTML=''; const ctx = chart.getContext('2d'); ctx.clearRect(0,0,chart.width,chart.height); return; }
+      const b = budgets.find(x=> x.id===budgetId); const monthsBudget = monthlyBudgetArray(b.amount); const monthsActual = computeMonthlyActualsForBudget(budgetId);
+      tbody.innerHTML = '';
+      for(let i=0;i<12;i++){ const variance = monthsBudget[i] - monthsActual[i]; const tr = document.createElement('tr'); tr.innerHTML = `<td>${new Date(2000, i, 1).toLocaleString(undefined,{month:'short'})}</td><td class="right">${Number(monthsBudget[i]).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="right">${Number(monthsActual[i]).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="right">${Number(variance).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>`; tbody.appendChild(tr); }
+      drawMonthlyChart(monthsBudget, monthsActual);
+    }
+
+    function drawMonthlyChart(budArr, actArr){ const canvas = $id('monthlyChart'); if(!canvas) return; const ctx = canvas.getContext('2d'); const w = canvas.width; const h = canvas.height; ctx.clearRect(0,0,w,h); const padding = 40; const maxVal = Math.max(...budArr.concat(actArr).map(Math.abs),1); const barW = Math.min(18, (w - padding*2) / 12 / 2);
+      for(let i=0;i<12;i++){ const xBase = padding + i * ((w - padding*2) / 12);
+        const bx = xBase; const bh = (budArr[i] / maxVal) * (h - 80); ctx.fillStyle = 'rgba(5,150,105,0.9)'; ctx.fillRect(bx, h-30-bh, barW, bh);
+        const ax = bx + barW + 6; const ah = (actArr[i] / maxVal) * (h - 80); ctx.fillStyle = 'rgba(14,165,233,0.9)'; ctx.fillRect(ax, h-30-ah, barW, ah);
+        ctx.fillStyle = '#374151'; ctx.font='11px Inter'; const label = new Date(2000,i,1).toLocaleString(undefined,{month:'short'}); ctx.fillText(label, bx-4, h-8);
+      }
+      // legend
+      ctx.fillStyle='rgba(5,150,105,0.9)'; ctx.fillRect(w-220,10,12,12); ctx.fillStyle='#374151'; ctx.fillText('Budget', w-200, 20);
+      ctx.fillStyle='rgba(14,165,233,0.9)'; ctx.fillRect(w-120,10,12,12); ctx.fillStyle='#374151'; ctx.fillText('Actual', w-98, 20);
+    }
+
+    function addMapping(){ const bid = $id('mapBudget').value; const acct = ($id('mapAccount').value||'').trim(); if(!bid || !acct){ alert('Select budget and enter account code'); return; } mappings[bid] = mappings[bid] || []; if(!mappings[bid].includes(acct)) mappings[bid].push(acct); localStorage.setItem(MAP_KEY, JSON.stringify(mappings)); renderMappings(); renderSummary(); alert('Mapping added'); $id('mapAccount').value=''; }
+
+    function renderMappings(){ const node = $id('mappingsList'); if(!node) return; node.innerHTML = ''; Object.keys(mappings).forEach(bid=>{ const b = budgets.find(x=> x.id===bid); const title = b ? (b.year + ' — ' + b.dept) : bid; const wrap = document.createElement('div'); wrap.style.marginBottom='8px'; const t = document.createElement('div'); t.innerHTML = '<strong>'+escapeHtml(title)+'</strong>'; wrap.appendChild(t); const list = document.createElement('div'); list.style.marginTop='6px'; (mappings[bid]||[]).forEach(code=>{ const chip = document.createElement('span'); chip.style.display='inline-block'; chip.style.padding='6px 10px'; chip.style.borderRadius='12px'; chip.style.margin='4px'; chip.style.background='#ecfdf3'; chip.style.fontWeight=700; chip.textContent = code; const rm = document.createElement('button'); rm.textContent='x'; rm.style.marginLeft='8px'; rm.onclick = ()=>{ mappings[bid] = mappings[bid].filter(c=> c !== code); localStorage.setItem(MAP_KEY, JSON.stringify(mappings)); renderMappings(); renderSummary(); }; chip.appendChild(rm); list.appendChild(chip); }); wrap.appendChild(list); node.appendChild(wrap); }); }
+
+    function seedSample(){ if(!confirm('Seed sample budgets and mappings?')) return; const sampleBudgets = [ { id: genId('bud'), year: new Date().getFullYear(), dept: 'Operations', amount: 120000 }, { id: genId('bud'), year: new Date().getFullYear(), dept: 'Sales', amount: 200000 }, { id: genId('bud'), year: new Date().getFullYear(), dept: 'HR', amount: 80000 } ]; localStorage.setItem(BUD_KEY, JSON.stringify(sampleBudgets)); const sampleMappings = {}; sampleMappings[sampleBudgets[0].id] = ['5000','5100']; sampleMappings[sampleBudgets[1].id] = ['4100']; sampleMappings[sampleBudgets[2].id] = ['5200']; localStorage.setItem(MAP_KEY, JSON.stringify(sampleMappings)); loadData(); alert('Sample budgets seeded'); }
+
+    function clearBudgets(){ if(!confirm('Clear all budgets and mappings?')) return; localStorage.removeItem(BUD_KEY); localStorage.removeItem(MAP_KEY); budgets=[]; mappings={}; loadData(); }
+
+    function exportCSV(){ const rows = [['Budget,Year,BudgetAmount,Actual,Variance,%Used']]; budgets.forEach(b=>{ const actual = computeActualForBudget(b.id); const variance = Number(b.amount||0) - actual; const pct = b.amount ? (actual / Number(b.amount||0)*100) : 0; rows.push([escapeCsv(b.dept), b.year, b.amount, actual, variance, pct.toFixed(1)].join(',')); }); const csv = rows.join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'budget_vs_actual_summary.csv'; a.click(); URL.revokeObjectURL(url); }
+
+    function exportBudgetCsv(){ const bid = $id('selectBudget').value; if(!bid) return alert('Select a budget'); const b = budgets.find(x=> x.id===bid); const monthsBudget = monthlyBudgetArray(b.amount); const monthsActual = computeMonthlyActualsForBudget(bid); const rows = [['Month,Budget,Actual,Variance']]; for(let i=0;i<12;i++){ rows.push([new Date(2000,i,1).toLocaleString(undefined,{month:'short'}), monthsBudget[i], monthsActual[i], monthsBudget[i]-monthsActual[i]].join(',')); } const csv = rows.join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = (b.dept||'budget') + '_monthly.csv'; a.click(); URL.revokeObjectURL(url); }
+
+    function escapeCsv(s){ return '"'+String(s).replace(/"/g,'""')+'"' }
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // event wiring
+    document.addEventListener('DOMContentLoaded', ()=>{
+      loadData();
+      $id('runBtn').addEventListener('click', ()=>{ renderSummary(); });
+      $id('refreshBtn').addEventListener('click', ()=>{ loadData(); });
+      $id('selectBudget').addEventListener('change', ()=> renderMonthly($id('selectBudget').value));
+      $id('addMap').addEventListener('click', addMapping);
+      $id('clearMaps').addEventListener('click', ()=>{ if(!confirm('Clear all mappings?')) return; mappings={}; localStorage.setItem(MAP_KEY, JSON.stringify(mappings)); renderMappings(); renderSummary(); });
+      $id('seedSample').addEventListener('click', seedSample);
+      $id('clearBudgets').addEventListener('click', clearBudgets);
+      $id('exportCsv').addEventListener('click', exportCSV);
+      $id('exportBudgetCsv').addEventListener('click', exportBudgetCsv);
+      // initial render
+      renderSummary(); renderMappings();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Income Statement — ThinkShip ERP</title>
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#ffffff 0%, #f3f4ff 100%);
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0f172a;
+      --brand-start:#8b5cf6; /* purple variant for this report */
+      --brand-end:#6d28d9;
+      --accent:#7c3aed;
+      --shadow: 0 10px 30px rgba(15,23,42,0.06);
+      --radius: 14px;
+      --mono: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    }
+    *{box-sizing:border-box}
+    body{font-family:var(--mono);margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    .wrap{max-width:1180px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0;font-weight:800}
+    .muted{color:var(--muted);font-size:13px}
+
+    .controls{display:flex;gap:10px;align-items:center}
+    .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);border:1px solid rgba(99,102,241,0.06)}
+
+    input,select{padding:10px;border-radius:10px;border:1px solid #e6edf3;font-size:14px}
+    .btn{padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-start),var(--brand-end));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--brand-end)}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#fbfdff}
+    .right{text-align:right}
+    .muted-sm{font-size:12px;color:var(--muted)}
+    .kpi{display:flex;gap:12px}
+    .kpi .card{flex:1}
+    .small{font-size:13px}
+
+    .section-title{font-weight:700;margin:0 0 8px}
+    canvas{width:100%;height:200px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Income Statement</h1>
+        <div class="muted">Design for Income Statement — period selection, category mappings, B/S-linked GL aggregation.</div>
+      </div>
+      <div class="controls">
+        <button class="btn btn-ghost small" id="exportCsv">Export CSV</button>
+        <button class="btn btn-primary small" id="refreshBtn">Refresh</button>
+      </div>
+    </header>
+
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label class="muted-sm">From</label>
+        <input type="date" id="fromDate" />
+        <label class="muted-sm">To</label>
+        <input type="date" id="toDate" />
+        <label class="muted-sm">Compare To</label>
+        <select id="compareTo"><option value="none">None</option><option value="prior">Prior Period</option><option value="same">Same Period Last Year</option></select>
+        <button class="btn btn-primary small" id="runBtn">Run</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <main>
+        <div class="card">
+          <h3 class="section-title">Income Statement (Summary)</h3>
+          <div class="kpi" style="margin-top:8px">
+            <div class="card"><div class="muted-sm">Revenue</div><div id="kpiRevenue" style="font-size:20px;font-weight:800">0</div></div>
+            <div class="card"><div class="muted-sm">Gross Profit</div><div id="kpiGross" style="font-size:20px;font-weight:800">0</div></div>
+            <div class="card"><div class="muted-sm">Operating Profit</div><div id="kpiOperating" style="font-size:20px;font-weight:800">0</div></div>
+            <div class="card"><div class="muted-sm">Net Profit</div><div id="kpiNet" style="font-size:20px;font-weight:800">0</div></div>
+          </div>
+
+          <div style="margin-top:14px">
+            <table id="isTable"><thead><tr><th>Section</th><th class="right">Amount</th><th class="right">Compare</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Breakdown by Category</h3>
+          <canvas id="isChart" width="600" height="240"></canvas>
+        </div>
+      </main>
+
+      <aside>
+        <div class="card">
+          <h3 class="section-title">Account Mappings</h3>
+          <div class="muted-sm">Map Chart-of-Accounts codes to income statement sections. Mappings are saved locally.</div>
+          <label style="margin-top:8px">Section</label>
+          <select id="mapSection"><option value="revenue">Revenue</option><option value="cogs">COGS</option><option value="opex">Operating Expense</option><option value="other_income">Other Income</option><option value="other_expense">Other Expense</option></select>
+          <label style="margin-top:8px">Account (COA Code)</label>
+          <input id="mapAccount" type="text" placeholder="e.g. 4000 or 5000" />
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary small" id="addMap">Add</button>
+            <button class="btn btn-ghost small" id="clearMaps">Clear</button>
+          </div>
+          <div style="margin-top:12px">
+            <h4 class="muted-sm">Current mappings</h4>
+            <div id="mappingsList"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Notes & Help</h3>
+          <div class="muted-sm">This report reads journal entries from localStorage key <code>ts_demo_gl_v1</code>. Journal entries must include <code>lines</code> with <code>account</code>, <code>dc</code> ("debit" or "credit"), and <code>amount</code>.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const GL_KEY = 'ts_demo_gl_v1';
+    const MAPS_KEY = 'ts_demo_report_mappings_income_v1';
+
+    let mappings = { revenue: [], cogs: [], opex: [], other_income: [], other_expense: [] };
+
+    function genId(p='x'){ return p + Math.random().toString(36).slice(2,9) }
+    function $id(id){ return document.getElementById(id) }
+    function loadMappings(){ try{ const raw = localStorage.getItem(MAPS_KEY); if(raw) mappings = JSON.parse(raw); }catch(e){ mappings = { revenue: [], cogs: [], opex: [], other_income: [], other_expense: [] } } renderMappings(); }
+    function saveMappings(){ localStorage.setItem(MAPS_KEY, JSON.stringify(mappings)); renderMappings(); }
+
+    function renderMappings(){ const node = $id('mappingsList'); if(!node) return; node.innerHTML=''; Object.keys(mappings).forEach(key=>{ const wrap = document.createElement('div'); wrap.style.marginBottom='8px'; const title = document.createElement('div'); title.innerHTML = '<strong>'+key.toUpperCase().replace('_',' ')+'</strong>'; wrap.appendChild(title); const list = document.createElement('div'); list.style.marginTop='6px'; (mappings[key]||[]).forEach(code=>{ const chip = document.createElement('span'); chip.style.display='inline-block'; chip.style.padding='6px 10px'; chip.style.borderRadius='12px'; chip.style.margin='4px'; chip.style.background='#f3f4ff'; chip.style.fontWeight=700; chip.textContent = code; const rm = document.createElement('button'); rm.textContent='x'; rm.style.marginLeft='8px'; rm.onclick = ()=>{ mappings[key] = mappings[key].filter(c=> c !== code); saveMappings(); }; chip.appendChild(rm); list.appendChild(chip); }); wrap.appendChild(list); node.appendChild(wrap); }); }
+
+    function addMapping(){ const section = $id('mapSection').value; const acct = ($id('mapAccount').value||'').trim(); if(!acct){ alert('Enter an account code'); return; } mappings[section] = mappings[section] || []; if(!mappings[section].includes(acct)) mappings[section].push(acct); saveMappings(); $id('mapAccount').value=''; }
+    function clearMappings(){ if(!confirm('Clear all mappings?')) return; mappings = { revenue: [], cogs: [], opex: [], other_income: [], other_expense: [] }; saveMappings(); }
+
+    function getGL(){ try{ return JSON.parse(localStorage.getItem(GL_KEY) || '[]') }catch(e){ return [] } }
+
+    function signedLineAmount(line){ if(!line) return 0; if(line.dc === 'debit') return Number(line.amount||0); if(line.dc === 'credit') return -Number(line.amount||0); return Number(line.amount||0); }
+
+    function aggregateGL(from, to){ // returns totals per mapping category; 'from' and 'to' are ISO dates
+      const gl = getGL(); const totals = { revenue:0, cogs:0, opex:0, other_income:0, other_expense:0 };
+      gl.forEach(j=>{
+        try{
+          const jdate = new Date(j.date || j.postedAt || j.createdAt || '');
+          if(from && new Date(jdate) < new Date(from)) return; if(to && new Date(jdate) > new Date(to)) return;
+          (j.lines||[]).forEach(line=>{
+            const acct = (line.account||'').toString(); const amt = signedLineAmount(line);
+            // add amt to any mapped category that contains this account code
+            Object.keys(mappings).forEach(key=>{
+              if((mappings[key]||[]).includes(acct)){
+                totals[key] += amt;
+              }
+            });
+          });
+        }catch(e){}
+      });
+      // Note: totals are in "debit-positive" terms. For revenue/other_income we want credit-based positive numbers
+      return {
+        revenue: -(totals.revenue||0),
+        cogs: (totals.cogs||0),
+        opex: (totals.opex||0),
+        other_income: -(totals.other_income||0),
+        other_expense: (totals.other_expense||0)
+      };
+    }
+
+    function format(v){ const n = Number(v||0); return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) }
+
+    function buildIncomeStatement(from, to, compareMode){ const base = aggregateGL(from,to);
+      const revenue = base.revenue; const cogs = base.cogs; const gross = revenue - cogs; const opex = base.opex; const operating = gross - opex; const otherInc = base.other_income; const otherExp = base.other_expense; const net = operating + otherInc - otherExp;
+
+      // populate KPIs
+      if($id('kpiRevenue')) $id('kpiRevenue').textContent = format(revenue);
+      if($id('kpiGross')) $id('kpiGross').textContent = format(gross);
+      if($id('kpiOperating')) $id('kpiOperating').textContent = format(operating);
+      if($id('kpiNet')) $id('kpiNet').textContent = format(net);
+
+      // table
+      const tbody = $id('isTable').querySelector('tbody'); tbody.innerHTML = '';
+      const rows = [ ['Revenue', revenue], ['Cost of Goods Sold', cogs], ['Gross Profit', gross], ['Operating Expenses', opex], ['Operating Profit', operating], ['Other Income', otherInc], ['Other Expenses', otherExp], ['Net Profit', net] ];
+      rows.forEach(r=>{
+        const tr = document.createElement('tr'); tr.innerHTML = `<td>${r[0]}</td><td class="right">${format(r[1])}</td><td class="right">${compareMode ? '—' : ''}</td>`; tbody.appendChild(tr);
+      });
+
+      // chart: breakdown (revenue positive, expenses positive stacked as negative to show drag)
+      drawChart([ ['Revenue', revenue], ['COGS', -cogs], ['Opex', -opex], ['Other Inc', otherInc], ['Other Exp', -otherExp] ]);
+    }
+
+    function drawChart(data){ const canvas = $id('isChart'); if(!canvas) return; const ctx = canvas.getContext('2d'); const w = canvas.width; const h = canvas.height; ctx.clearRect(0,0,w,h);
+      // simple horizontal bar chart
+      const labels = data.map(d=>d[0]); const vals = data.map(d=>d[1]); const max = Math.max(...vals.map(Math.abs),1);
+      const barH = 22; const gap = 14; const left = 120; ctx.font='13px Inter';
+      data.forEach((d,i)=>{
+        const y = 20 + i*(barH+gap);
+        ctx.fillStyle = '#374151'; ctx.fillText(d[0], 12, y+14);
+        const val = d[1]; const barW = (Math.abs(val)/max) * (w - left - 40);
+        const x = left + (val >=0 ? 0 : (w-left - 40 - barW));
+        ctx.fillStyle = val>=0 ? 'rgba(139,92,246,0.9)' : 'rgba(209,213,219,0.95)';
+        ctx.fillRect(x, y, barW, barH);
+        ctx.fillStyle = '#111827'; ctx.fillText(format(val), left + (val>=0 ? barW + 8 : -40), y+14);
+      });
+    }
+
+    // CSV export
+    function exportCSV(from,to){ const base = aggregateGL(from,to); const rows = [['Section,Amount'], ['Revenue,'+base.revenue], ['COGS,'+base.cogs], ['Gross Profit,'+(base.revenue-base.cogs)], ['Operating Expense,'+base.opex], ['Operating Profit,'+((base.revenue-base.cogs)-base.opex)], ['Other Income,'+base.other_income], ['Other Expense,'+base.other_expense], ['Net Profit,'+(((base.revenue-base.cogs)-base.opex)+base.other_income-base.other_expense)]]; const csv = rows.map(r=> r.join(',')).join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'income_statement.csv'; a.click(); URL.revokeObjectURL(url); }
+
+    // safe getters
+    function $id(id){ return document.getElementById(id) }
+
+    // event wiring
+    document.addEventListener('DOMContentLoaded', ()=>{
+      try{
+        loadMappings();
+        // default dates: past quarter
+        const today = new Date(); const prior = new Date(); prior.setMonth(today.getMonth()-3);
+        $id('fromDate').value = prior.toISOString().slice(0,10);
+        $id('toDate').value = today.toISOString().slice(0,10);
+
+        const run = ()=>{
+          const from = $id('fromDate').value; const to = $id('toDate').value; const cmp = $id('compareTo').value;
+          buildIncomeStatement(from,to, cmp !== 'none');
+        };
+
+        $id('runBtn').addEventListener('click', run);
+        $id('refreshBtn').addEventListener('click', ()=>{ loadMappings(); run(); });
+        $id('addMap').addEventListener('click', addMapping);
+        $id('clearMaps').addEventListener('click', clearMappings);
+        $id('exportCsv').addEventListener('click', ()=>{ exportCSV($id('fromDate').value, $id('toDate').value); });
+
+        // inputs
+        const mapSection = $id('mapSection'); if(mapSection){ /* noop */ }
+
+        // initial run
+        buildIncomeStatement($id('fromDate').value, $id('toDate').value, false);
+      }catch(err){ console.error('Init error', err); alert('Income Statement init error — check console'); }
+    });
+  </script>
+</body>
+</html>

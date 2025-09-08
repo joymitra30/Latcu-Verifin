@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>General Ledger - ThinkShip ERP</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--muted:#6b7280;--brand:#6366f1}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a;margin:0;padding:24px}
+    .container{max-width:1200px;margin:0 auto}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    h1{font-size:20px;margin:0}
+    .muted{color:var(--muted)}
+    .layout{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 4px 24px rgba(15,23,42,0.06)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text], input[type=date], input[type=number], select, textarea{width:100%;padding:10px;border:1px solid #e6edf3;border-radius:8px;font-size:14px}
+    textarea{min-height:80px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .small{font-size:13px;padding:8px 10px;border-radius:8px}
+    button{background:var(--brand);color:#fff;padding:10px 12px;border-radius:8px;border:0;cursor:pointer}
+    button.ghost{background:transparent;color:var(--brand);border:1px solid rgba(99,102,241,0.12)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#fbfdff}
+    .right{text-align:right}
+    .error{color:#b91c1c;font-weight:700}
+    .success{color:#065f46;font-weight:700}
+    @media(max-width:1000px){.layout{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>General Ledger</h1>
+        <div class="muted">Record and view double-entry transactions. Transactions from other modules should post here automatically (you can simulate posts).</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="ghost small" onclick="openImport()">Import Journal CSV</button>
+        <button class="ghost small" onclick="exportJournal()">Export Journal</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <main class="card">
+        <section>
+          <h3 style="margin:0 0 8px 0">Create Journal Entry</h3>
+          <form id="jeForm" onsubmit="return saveJournalEntry(event)">
+            <div class="grid2">
+              <div>
+                <label for="jeDate">Date</label>
+                <input id="jeDate" type="date" required />
+              </div>
+              <div>
+                <label for="jeRef">Reference</label>
+                <input id="jeRef" type="text" placeholder="Ref (e.g. INV-1001)" />
+              </div>
+            </div>
+
+            <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+              <label style="min-width:80px">Lines</label>
+              <button type="button" class="ghost small" onclick="addLine()">+ Add Line</button>
+              <button type="button" class="ghost small" onclick="clearLines()">Clear</button>
+            </div>
+
+            <div id="linesWrapper" style="margin-top:8px"></div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+              <div class="muted">Double-entry must balance (Total Debits = Total Credits)</div>
+              <div>
+                <span class="muted">Debits:</span> <strong id="sumDebits">0</strong>
+                &nbsp; &nbsp;
+                <span class="muted">Credits:</span> <strong id="sumCredits">0</strong>
+              </div>
+            </div>
+
+            <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
+              <div id="jeMsg"></div>
+              <div>
+                <button type="button" class="ghost" onclick="simulateModulePost()">Simulate Expense Post</button>
+                <button type="submit">Post to GL</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section style="margin-top:18px">
+          <h3 style="margin:0 0 8px 0">Journal Entries</h3>
+          <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+            <input id="filterAccount" type="text" placeholder="Filter by account code or name" style="padding:8px;border-radius:8px;border:1px solid #eef2f7" oninput="renderJournal()" />
+            <input id="fromDate" type="date" onchange="renderJournal()" />
+            <input id="toDate" type="date" onchange="renderJournal()" />
+            <button class="ghost small" onclick="resetFilters()">Reset</button>
+          </div>
+          <table id="journalTable"><thead><tr><th>Date</th><th>Ref</th><th>Description</th><th>Lines</th><th class="right">Debit</th><th class="right">Credit</th><th></th></tr></thead><tbody></tbody></table>
+        </section>
+
+        <section style="margin-top:18px">
+          <h3 style="margin:0 0 8px 0">Trial Balance</h3>
+          <div class="muted">Shows closing debit/credit balances by account</div>
+          <table id="trialTable"><thead><tr><th>Account</th><th class="right">Debit</th><th class="right">Credit</th></tr></thead><tbody></tbody><tfoot><tr><th>Total</th><th class="right" id="trialDebitTotal">0</th><th class="right" id="trialCreditTotal">0</th></tr></tfoot></table>
+        </section>
+      </main>
+
+      <aside class="card">
+        <h3>Ledger Utilities</h3>
+        <div style="margin-top:10px">
+          <label for="coaSelect">Quick Post (pick account)</label>
+          <select id="coaSelect"></select>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="quickAmount" type="number" step="0.01" placeholder="Amount" />
+            <select id="quickSide"><option value="debit">Debit</option><option value="credit">Credit</option></select>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="small" onclick="quickPost()">Quick Post</button>
+            <button class="small ghost" onclick="reconcileBalances()">Recalculate</button>
+          </div>
+        </div>
+
+        <div style="margin-top:18px">
+          <h4>Account Ledger</h4>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <input id="ledgerAccountFilter" type="text" placeholder="Account code/name" style="padding:8px;border-radius:8px;border:1px solid #eef2f7" />
+            <button class="ghost small" onclick="openLedger()">Open</button>
+          </div>
+          <div id="ledgerView" style="margin-top:8px"></div>
+        </div>
+
+        <div style="margin-top:18px">
+          <h4>Notes</h4>
+          <div class="muted">This is a front-end demo. In production, transactions from AP/AR/Expenses/Income/Bank should call the GL API to create journal entries automatically. Use the Simulate button to test auto-post behaviour.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <input type="file" id="importFile" style="display:none" accept="text/csv" onchange="handleImportFile(event)" />
+
+  <script>
+    const GL_KEY = 'ts_demo_gl_v1';
+    const COA_KEY = 'coa_demo_accounts_v1';
+    let journal = []; // array of {id,date,ref,description,lines:[{account,code,dc,amount}], totalDebit,totalCredit}
+    let coa = [];
+
+    function genId(){ return 'j'+Math.random().toString(36).slice(2,9) }
+
+    function loadCOA(){ try{ coa = JSON.parse(localStorage.getItem(COA_KEY)||'[]') }catch(e){ coa=[] }
+      const sel = document.getElementById('coaSelect'); sel.innerHTML = '<option value="">-- Select account --</option>';
+      coa.forEach(a=>{ const opt=document.createElement('option'); opt.value = a.code||a.id; opt.textContent = (a.code? a.code+' — ':'')+a.name; sel.appendChild(opt) })
+    }
+
+    function loadJournal(){ try{ journal = JSON.parse(localStorage.getItem(GL_KEY)||'[]') }catch(e){ journal=[] } renderJournal(); renderTrialBalance(); }
+
+    // Journal lines UI
+    function addLine(pref){ const wrapper = document.getElementById('linesWrapper'); const idx = wrapper.children.length; const div = document.createElement('div'); div.style.display='grid'; div.style.gridTemplateColumns='2fr 1fr 80px 40px'; div.style.gap='8px'; div.style.marginBottom='8px';
+      const accountSel = document.createElement('select'); accountSel.innerHTML = '<option value="">-- select account --</option>'; coa.forEach(a=>{ const o=document.createElement('option'); o.value=a.code||a.id; o.textContent=(a.code? a.code+' — ':'')+a.name; accountSel.appendChild(o) });
+      if(pref && pref.account) accountSel.value = pref.account;
+      const desc = document.createElement('input'); desc.type='text'; desc.placeholder='Narration / Description'; if(pref && pref.desc) desc.value=pref.desc;
+      const amt = document.createElement('input'); amt.type='number'; amt.step='0.01'; amt.value = pref && pref.amount? pref.amount : 0; amt.style.textAlign='right';
+      const dc = document.createElement('select'); dc.innerHTML = '<option value="debit">Dr</option><option value="credit">Cr</option>'; if(pref && pref.dc) dc.value = pref.dc;
+      const del = document.createElement('button'); del.textContent='✖'; del.title='Remove line'; del.className='ghost small'; del.onclick = ()=>{ div.remove(); recalcSums(); };
+      div.appendChild(accountSel); div.appendChild(desc); div.appendChild(amt); div.appendChild(dc);
+      wrapper.appendChild(div);
+      // focus latest
+      accountSel.focus(); amt.oninput = recalcSums; dc.onchange = recalcSums; accountSel.onchange = recalcSums; desc.onchange = recalcSums;
+      recalcSums();
+    }
+
+    function clearLines(){ document.getElementById('linesWrapper').innerHTML=''; recalcSums(); }
+
+    function recalcSums(){ const lines = Array.from(document.querySelectorAll('#linesWrapper > div')); let debit=0, credit=0; lines.forEach(div=>{ const selects=div.querySelectorAll('select'); const account=selects[0]; const dc = selects[1]; const amt = div.querySelector('input[type=number]'); const val = parseFloat(amt.value||0); if(dc.value==='debit') debit += val; else credit += val; }); document.getElementById('sumDebits').textContent = Number(debit).toLocaleString(undefined,{maximumFractionDigits:2}); document.getElementById('sumCredits').textContent = Number(credit).toLocaleString(undefined,{maximumFractionDigits:2}); return {debit,credit}; }
+
+    function saveJournalEntry(e){ if(e) e.preventDefault(); const date = document.getElementById('jeDate').value; const ref = document.getElementById('jeRef').value.trim(); const linesDiv = Array.from(document.querySelectorAll('#linesWrapper > div'));
+      if(!date){ showMsg('Please select a date','error'); return false }
+      if(linesDiv.length<1){ showMsg('Add at least one line','error'); return false }
+      const lines = []; linesDiv.forEach(div=>{ const sels = div.querySelectorAll('select'); const account = sels[0].value; const dc = sels[1].value; const desc = div.querySelector('input[type=text]').value.trim(); const amt = parseFloat(div.querySelector('input[type=number]').value||0); if(account && amt>0){ lines.push({account,desc,dc,amount:amt}) } });
+      if(lines.length<1){ showMsg('Add valid account lines with amounts','error'); return false }
+      const totals = {debit:0,credit:0}; lines.forEach(l=>{ if(l.dc==='debit') totals.debit += l.amount; else totals.credit += l.amount });
+      if(Math.abs(totals.debit - totals.credit) > 0.0001){ showMsg('Entry not balanced. Debits must equal Credits','error'); return false }
+      const entry = { id: genId(), date, ref, description: lines.map(l=>l.desc||'').filter(Boolean).join(' | '), lines, totalDebit:totals.debit, totalCredit:totals.credit };
+      journal.push(entry); localStorage.setItem(GL_KEY, JSON.stringify(journal)); loadJournal(); clearEntryForm(); showMsg('Journal posted','success'); return false;
+    }
+
+    function clearEntryForm(){ document.getElementById('jeForm').reset(); document.getElementById('linesWrapper').innerHTML=''; recalcSums(); }
+
+    function showMsg(txt,type){ const m=document.getElementById('jeMsg'); m.textContent = txt; m.className = type==='error' ? 'error' : 'success'; setTimeout(()=>{ m.textContent=''; m.className=''; },3000); }
+
+    function renderJournal(){ const tbody = document.querySelector('#journalTable tbody'); tbody.innerHTML=''; const q = (document.getElementById('filterAccount').value||'').toLowerCase(); const from = document.getElementById('fromDate').value; const to = document.getElementById('toDate').value; const rows = journal.slice().sort((a,b)=> new Date(b.date)-new Date(a.date));
+      rows.forEach(entry=>{ if(from && entry.date < from) return; if(to && entry.date > to) return; const linesText = entry.lines.map(l=>{ const acc = coa.find(a=> (a.code||a.id) === l.account); const accLabel = acc ? ((acc.code? acc.code+' — ':'')+acc.name) : l.account; return accLabel + ' ('+ (l.dc==='debit'?'Dr':'Cr') + ' ' + Number(l.amount).toLocaleString()+')' }).join('<br/>'); if(q){ if(!(entry.ref||'').toLowerCase().includes(q) && !(entry.description||'').toLowerCase().includes(q) && !entry.lines.some(l=>{ const acc=coa.find(a=> (a.code||a.id) === l.account); return ((acc && (acc.code+' '+acc.name)||'')+' '+l.desc).toLowerCase().includes(q) })) return; }
+        const tr=document.createElement('tr'); tr.innerHTML = `<td>${entry.date}</td><td>${escapeHtml(entry.ref||'')}</td><td>${escapeHtml(entry.description||'')}</td><td>${linesText}</td><td class="right">${Number(entry.totalDebit).toLocaleString()}</td><td class="right">${Number(entry.totalCredit).toLocaleString()}</td><td style="text-align:right"><button class="small ghost" onclick="reverseEntry('${entry.id}')">Reverse</button></td>`; tbody.appendChild(tr);
+      });
+    }
+
+    function reverseEntry(id){ if(!confirm('Create reversing entry for this journal?')) return; const e = journal.find(x=>x.id===id); if(!e) return; const revLines = e.lines.map(l=> ({ account:l.account, desc:'Reversal of '+(l.desc||''), dc: l.dc==='debit' ? 'credit' : 'debit', amount: l.amount })); const rev = { id: genId(), date: new Date().toISOString().slice(0,10), ref: 'REV-'+e.ref, description: 'Reversal of '+(e.ref||e.id), lines: revLines, totalDebit: e.totalCredit, totalCredit: e.totalDebit };
+      journal.push(rev); localStorage.setItem(GL_KEY, JSON.stringify(journal)); loadJournal(); showMsg('Reversing entry posted','success'); }
+
+    function renderTrialBalance(){ const map = {}; journal.forEach(j=>{ j.lines.forEach(l=>{ if(!map[l.account]) map[l.account] = {debit:0,credit:0}; if(l.dc==='debit') map[l.account].debit += l.amount; else map[l.account].credit += l.amount; }) }); const tbody = document.querySelector('#trialTable tbody'); tbody.innerHTML=''; let totD=0, totC=0; Object.keys(map).sort().forEach(accKey=>{ const acc = coa.find(a=> (a.code||a.id)===accKey); const label = acc ? ((acc.code? acc.code+' — ':'')+acc.name) : accKey; const d = map[accKey].debit; const c = map[accKey].credit; totD += d; totC += c; const tr = document.createElement('tr'); tr.innerHTML = `<td>${label}</td><td class="right">${Number(d).toLocaleString()}</td><td class="right">${Number(c).toLocaleString()}</td>`; tbody.appendChild(tr); }); document.getElementById('trialDebitTotal').textContent = Number(totD).toLocaleString(); document.getElementById('trialCreditTotal').textContent = Number(totC).toLocaleString(); }
+
+    function resetFilters(){ document.getElementById('filterAccount').value=''; document.getElementById('fromDate').value=''; document.getElementById('toDate').value=''; renderJournal(); }
+
+    // Quick post: create a simple 2-line entry: selected account + counter account (e.g., Cash/Bank)
+    function quickPost(){ const acc = document.getElementById('coaSelect').value; const amt = parseFloat(document.getElementById('quickAmount').value||0); const side = document.getElementById('quickSide').value; if(!acc || amt<=0){ alert('Select account and enter amount'); return }
+      // choose a counter account: try Cash (code starts with 11 or name contains Cash) else pick first asset or first account
+      let counter = (coa.find(a=> (a.name||'').toLowerCase().includes('cash') || (a.code||'').startsWith('11')) || coa[0]);
+      if(!counter){ alert('No accounts available in Chart of Accounts'); return }
+      const lines = [];
+      if(side==='debit'){ lines.push({account:acc,desc:'Quick post',dc:'debit',amount:amt}); lines.push({account:counter.code||counter.id,desc:'Counter',dc:'credit',amount:amt}); }
+      else { lines.push({account:acc,desc:'Quick post',dc:'credit',amount:amt}); lines.push({account:counter.code||counter.id,desc:'Counter',dc:'debit',amount:amt}); }
+      const entry = { id: genId(), date: new Date().toISOString().slice(0,10), ref:'QPOST', description:'Quick GL post', lines, totalDebit:amt, totalCredit:amt };
+      journal.push(entry); localStorage.setItem(GL_KEY, JSON.stringify(journal)); loadJournal(); showMsg('Quick post saved','success'); }
+
+    // Open ledger for an account: show running balance
+    function openLedger(){ const q = document.getElementById('ledgerAccountFilter').value.trim(); if(!q){ alert('Enter account code or name'); return }
+      const acc = coa.find(a=> (a.code||a.id)===q || (a.name||'').toLowerCase().includes(q.toLowerCase())); if(!acc){ alert('Account not found'); return }
+      const accKey = acc.code||acc.id; const rows = [];
+      let balance = 0; const tb = document.getElementById('ledgerView'); tb.innerHTML = `<h4>${acc.code? acc.code+' — '+acc.name : acc.name}</h4>`;
+      const table = document.createElement('table'); table.innerHTML = '<thead><tr><th>Date</th><th>Ref</th><th>Description</th><th class="right">Debit</th><th class="right">Credit</th><th class="right">Balance</th></tr></thead>';
+      const body = document.createElement('tbody'); journal.slice().sort((a,b)=> new Date(a.date)-new Date(b.date)).forEach(j=>{ j.lines.forEach(l=>{ if((l.account)===accKey){ const d = l.dc==='debit' ? l.amount : 0; const c = l.dc==='credit' ? l.amount : 0; balance += (d-c); const tr = document.createElement('tr'); tr.innerHTML = `<td>${j.date}</td><td>${escapeHtml(j.ref||'')}</td><td>${escapeHtml(l.desc||j.description||'')}</td><td class="right">${d?Number(d).toLocaleString():'-'}</td><td class="right">${c?Number(c).toLocaleString():'-'}</td><td class="right">${Number(balance).toLocaleString()}</td>`; body.appendChild(tr); } }) });
+      table.appendChild(body); tb.appendChild(table);
+    }
+
+    function reconcileBalances(){ renderTrialBalance(); showMsg('Recalculated', 'success'); }
+
+    // Export/Import
+    function exportJournal(){ const rows = journal.map(j=> ({id:j.id,date:j.date,ref:j.ref,description:j.description,lines: JSON.stringify(j.lines),debit:j.totalDebit,credit:j.totalCredit})); const headers=['id','date','ref','description','lines','debit','credit']; const csv = [headers.join(','), ...rows.map(r=> headers.map(h=> '"'+String(r[h]||'').replace(/"/g,'""')+'"').join(','))].join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='journal.csv'; a.click(); URL.revokeObjectURL(url); }
+
+    function openImport(){ document.getElementById('importFile').click(); }
+    function handleImportFile(e){ const f = e.target.files[0]; if(!f) return; const reader = new FileReader(); reader.onload = ()=>{ parseJournalCSV(reader.result) }; reader.readAsText(f); }
+
+    function parseJournalCSV(csv){ // expects columns: date,ref,description,account,dc,amount (multiple lines per journal separated by same ref+date)
+      const lines = csv.split('\n').map(l=>l.trim()).filter(Boolean); const temp = {};
+      lines.forEach(line=>{ const cols = line.split(',').map(c=>c.trim().replace(/^"|"$/g,'')); if(cols.length<6) return; const [date,ref,description,account,dc,amount] = cols; const key = date+'|'+ref; if(!temp[key]) temp[key] = {date,ref,description,lines:[],debit:0,credit:0}; temp[key].lines.push({account,desc:description,dc,amount:parseFloat(amount||0)}); if(dc==='debit') temp[key].debit += parseFloat(amount||0); else temp[key].credit += parseFloat(amount||0); });
+      Object.keys(temp).forEach(k=>{ const e = temp[k]; if(Math.abs(e.debit - e.credit) > 0.0001){ console.warn('Skipping unbalanced import entry',k); return } journal.push({id:genId(),date:e.date,ref:e.ref,description:e.description,lines:e.lines,totalDebit:e.debit,totalCredit:e.credit}); }); localStorage.setItem(GL_KEY, JSON.stringify(journal)); loadJournal(); alert('Import complete'); }
+
+    // simulate posting from another module (e.g., Expense payment) — creates a balanced journal entry
+    function simulateModulePost(){ // create a demo expense: Debit Expense account, Credit Cash/Bank (quick mapping)
+      const expenseAcc = coa.find(a=> (a.name||'').toLowerCase().includes('expense') || (a.type||'').toLowerCase()==='expense');
+      const cashAcc = coa.find(a=> (a.name||'').toLowerCase().includes('cash') || (a.code||'').startsWith('11')) || coa[0];
+      if(!expenseAcc || !cashAcc){ alert('Please ensure Chart of Accounts has Expense and Cash accounts (demo)'); return }
+      const amt = parseFloat(prompt('Enter expense amount to post','100')||0); if(!amt || amt<=0) return;
+      const lines = [ {account: expenseAcc.code||expenseAcc.id, desc:'Expense from Purchase module', dc:'debit', amount:amt}, {account: cashAcc.code||cashAcc.id, desc:'Paid from Cash/Bank', dc:'credit', amount:amt} ];
+      const entry = { id: genId(), date:new Date().toISOString().slice(0,10), ref:'EXP-'+Math.floor(Math.random()*9000+1000), description:'Auto-post from Expense module', lines, totalDebit:amt, totalCredit:amt };
+      journal.push(entry); localStorage.setItem(GL_KEY, JSON.stringify(journal)); loadJournal(); showMsg('Simulated module post saved','success'); }
+
+    // helpers
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // init
+    document.addEventListener('DOMContentLoaded', ()=>{ loadCOA(); loadJournal(); // default one line ready
+      addLine({});
+    });
+  </script>
+</body>
+</html>

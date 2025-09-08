@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Balance Sheet — ThinkShip ERP</title>
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#f7fbff 0%, #eef6ff 100%);
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0f172a;
+      --brand-start:#06b6d4; /* teal/cyan accent for balance sheet */
+      --brand-end:#0891b2;
+      --accent:#0891b2;
+      --shadow: 0 10px 30px rgba(2,6,23,0.06);
+      --radius: 14px;
+      --mono: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    }
+    *{box-sizing:border-box}
+    body{font-family:var(--mono);margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    .wrap{max-width:1180px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0;font-weight:800}
+    .muted{color:var(--muted);font-size:13px}
+
+    .controls{display:flex;gap:10px;align-items:center}
+    .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);border:1px solid rgba(6,145,178,0.06)}
+
+    input,select{padding:10px;border-radius:10px;border:1px solid #e6edf3;font-size:14px}
+    .btn{padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-start),var(--brand-end));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--brand-end)}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#f8feff}
+    .right{text-align:right}
+    .muted-sm{font-size:12px;color:var(--muted)}
+    .kpi{display:flex;gap:12px}
+    .kpi .card{flex:1}
+    .small{font-size:13px}
+
+    .section-title{font-weight:700;margin:0 0 8px}
+    .split{display:flex;gap:18px}
+    .col{flex:1}
+    .note{font-size:13px;color:var(--muted)}
+    code{background:#f3f8fb;padding:4px 6px;border-radius:6px;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Balance Sheet</h1>
+        <div class="muted">Design for Balance Sheet — snapshot report (Assets = Liabilities + Equity). Period selector and account mappings.</div>
+      </div>
+      <div class="controls">
+        <button class="btn btn-ghost small" id="exportCsv">Export CSV</button>
+        <button class="btn btn-primary small" id="refreshBtn">Refresh</button>
+      </div>
+    </header>
+
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label class="muted-sm">As of</label>
+        <input type="date" id="asOfDate" />
+        <label class="muted-sm">Currency</label>
+        <select id="reportCurrency"><option value="TSH">TSH</option><option value="USD">USD</option></select>
+        <button class="btn btn-primary small" id="runBtn">Run</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <main>
+        <div class="card">
+          <h3 class="section-title">Balance Sheet (Snapshot)</h3>
+          <div style="margin-top:10px" class="split">
+            <div class="col">
+              <h4 class="muted-sm">Assets</h4>
+              <table id="assetsTable"><thead><tr><th>Account</th><th class="right">Amount</th></tr></thead><tbody></tbody><tfoot><tr><th>Total Assets</th><th class="right" id="totalAssets">0</th></tr></tfoot></table>
+            </div>
+            <div class="col">
+              <h4 class="muted-sm">Liabilities & Equity</h4>
+              <table id="liabEqTable"><thead><tr><th>Account</th><th class="right">Amount</th></tr></thead><tbody></tbody><tfoot><tr><th>Total Liabilities + Equity</th><th class="right" id="totalLiabEq">0</th></tr></tfoot></table>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+            <div class="note">Check that <strong>Assets = Liabilities + Equity</strong>. If not, inspect GL postings and mappings.</div>
+            <div class="kpi">
+              <div class="card"><div class="muted-sm">Total Assets</div><div id="kpiAssets" style="font-size:18px;font-weight:800">0</div></div>
+              <div class="card"><div class="muted-sm">Total Liab+Eq</div><div id="kpiLiabEq" style="font-size:18px;font-weight:800">0</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Category Summary</h3>
+          <table id="summaryTable"><thead><tr><th>Category</th><th class="right">Amount</th></tr></thead><tbody></tbody></table>
+        </div>
+      </main>
+
+      <aside>
+        <div class="card">
+          <h3 class="section-title">Account Mappings</h3>
+          <div class="muted-sm">Map COA codes to Balance Sheet sections so the report can aggregate correctly.</div>
+          <label style="margin-top:8px">Section</label>
+          <select id="mapSection"><option value="asset">Asset</option><option value="liability">Liability</option><option value="equity">Equity</option></select>
+          <label style="margin-top:8px">Account (COA Code)</label>
+          <input id="mapAccount" type="text" placeholder="e.g. 1000 or 2100" />
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary small" id="addMap">Add</button>
+            <button class="btn btn-ghost small" id="clearMaps">Clear</button>
+          </div>
+          <div style="margin-top:12px">
+            <h4 class="muted-sm">Current mappings</h4>
+            <div id="mappingsList"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 class="section-title">Notes</h3>
+          <div class="muted-sm">This report reads journal entries from <code>ts_demo_gl_v1</code>. It expects lines with <code>account</code>, <code>dc</code> and <code>amount</code>. Debit-positive convention is used when summing balances; mapping determines which side accounts appear on.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const GL_KEY = 'ts_demo_gl_v1';
+    const MAPS_KEY = 'ts_demo_report_mappings_bs_v1';
+
+    let mappings = { asset: [], liability: [], equity: [] };
+
+    function genId(p='x'){ return p + Math.random().toString(36).slice(2,9) }
+    function $id(id){ return document.getElementById(id) }
+
+    function loadMappings(){ try{ const raw = localStorage.getItem(MAPS_KEY); if(raw) mappings = JSON.parse(raw); }catch(e){ mappings = { asset: [], liability: [], equity: [] } } renderMappings(); }
+    function saveMappings(){ localStorage.setItem(MAPS_KEY, JSON.stringify(mappings)); renderMappings(); }
+
+    function renderMappings(){ const node = $id('mappingsList'); if(!node) return; node.innerHTML=''; Object.keys(mappings).forEach(key=>{ const wrap = document.createElement('div'); wrap.style.marginBottom='8px'; const title = document.createElement('div'); title.innerHTML = '<strong>'+key.toUpperCase()+'</strong>'; wrap.appendChild(title); const list = document.createElement('div'); list.style.marginTop='6px'; (mappings[key]||[]).forEach(code=>{ const chip = document.createElement('span'); chip.style.display='inline-block'; chip.style.padding='6px 10px'; chip.style.borderRadius='12px'; chip.style.margin='4px'; chip.style.background='#f0fdff'; chip.style.fontWeight=700; chip.textContent = code; const rm = document.createElement('button'); rm.textContent='x'; rm.style.marginLeft='8px'; rm.onclick = ()=>{ mappings[key] = mappings[key].filter(c=> c !== code); saveMappings(); }; chip.appendChild(rm); list.appendChild(chip); }); wrap.appendChild(list); node.appendChild(wrap); }); }
+
+    function addMapping(){ const section = $id('mapSection').value; const acct = ($id('mapAccount').value||'').trim(); if(!acct){ alert('Enter an account code'); return; } mappings[section] = mappings[section] || []; if(!mappings[section].includes(acct)) mappings[section].push(acct); saveMappings(); $id('mapAccount').value=''; }
+    function clearMappings(){ if(!confirm('Clear all mappings?')) return; mappings = { asset: [], liability: [], equity: [] }; saveMappings(); }
+
+    function getGL(){ try{ return JSON.parse(localStorage.getItem(GL_KEY) || '[]') }catch(e){ return [] } }
+
+    function signedLineAmount(line){ if(!line) return 0; if(line.dc === 'debit') return Number(line.amount||0); if(line.dc === 'credit') return -Number(line.amount||0); return Number(line.amount||0); }
+
+    function balanceAsOf(dateIso, currency){ // returns object {assets: [...], liabilities: [...], equity: [...], totals}
+      const gl = getGL(); const asOf = dateIso ? new Date(dateIso) : new Date(); const buckets = { asset: {}, liability: {}, equity: {} };
+      gl.forEach(j=>{
+        try{
+          const jdate = new Date(j.date || j.postedAt || j.createdAt || ''); if(jdate > asOf) return;
+          (j.lines||[]).forEach(line=>{
+            const acct = (line.account||'').toString(); const amt = signedLineAmount(line);
+            // determine mapping
+            if(mappings.asset && mappings.asset.includes(acct)) buckets.asset[acct] = (buckets.asset[acct]||0) + amt;
+            if(mappings.liability && mappings.liability.includes(acct)) buckets.liability[acct] = (buckets.liability[acct]||0) + amt;
+            if(mappings.equity && mappings.equity.includes(acct)) buckets.equity[acct] = (buckets.equity[acct]||0) + amt;
+          });
+        }catch(e){}
+      });
+      // convert to arrays with labels (try to find COA name if present)
+      const coa = (()=>{ try{ return JSON.parse(localStorage.getItem('coa_demo_accounts_v1')||'[]') }catch(e){ return [] } })();
+      function labelFor(code){ const c = coa.find(x=> (x.code||x.id) == code); return c ? ((c.code?c.code+' — ':'')+c.name) : code }
+      const assets = Object.keys(buckets.asset).map(k=> ({account:k, label:labelFor(k), amount: buckets.asset[k]})).sort((a,b)=> b.amount - a.amount);
+      const liabilities = Object.keys(buckets.liability).map(k=> ({account:k, label:labelFor(k), amount: buckets.liability[k]})).sort((a,b)=> b.amount - a.amount);
+      const equity = Object.keys(buckets.equity).map(k=> ({account:k, label:labelFor(k), amount: buckets.equity[k]})).sort((a,b)=> b.amount - a.amount);
+      const totalAssets = assets.reduce((s,x)=> s + (x.amount||0), 0);
+      const totalLiab = liabilities.reduce((s,x)=> s + (x.amount||0), 0);
+      const totalEquity = equity.reduce((s,x)=> s + (x.amount||0), 0);
+      return { assets, liabilities, equity, totalAssets, totalLiabEq: totalLiab + totalEquity, totalLiab, totalEquity };
+    }
+
+    function format(v){ const n = Number(v||0); return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) }
+
+    function buildBalanceSheet(){ const asOf = $id('asOfDate')?.value || new Date().toISOString().slice(0,10); const currency = $id('reportCurrency')?.value || 'TSH'; const data = balanceAsOf(asOf, currency);
+      // populate tables
+      const atBody = $id('assetsTable').querySelector('tbody'); atBody.innerHTML = '';
+      data.assets.forEach(a=>{ const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(a.label)}</td><td class="right">${format(a.amount)}</td>`; atBody.appendChild(tr); });
+      $id('totalAssets').textContent = format(data.totalAssets);
+
+      const leBody = $id('liabEqTable').querySelector('tbody'); leBody.innerHTML = '';
+      data.liabilities.forEach(l=>{ const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(l.label)}</td><td class="right">${format(l.amount)}</td>`; leBody.appendChild(tr); });
+      // equity rows
+      if(data.equity.length){ const hr = document.createElement('tr'); hr.innerHTML = `<td style="font-weight:700">-- Equity --</td><td></td>`; leBody.appendChild(hr); }
+      data.equity.forEach(e=>{ const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(e.label)}</td><td class="right">${format(e.amount)}</td>`; leBody.appendChild(tr); });
+
+      $id('totalLiabEq').textContent = format(data.totalLiabEq);
+      if($id('kpiAssets')) $id('kpiAssets').textContent = format(data.totalAssets);
+      if($id('kpiLiabEq')) $id('kpiLiabEq').textContent = format(data.totalLiabEq);
+
+      // summary table
+      const sumBody = $id('summaryTable').querySelector('tbody'); sumBody.innerHTML = '';
+      sumBody.appendChild(rowEl('Total Assets', data.totalAssets)); sumBody.appendChild(rowEl('Total Liabilities', data.totalLiab)); sumBody.appendChild(rowEl('Total Equity', data.totalEquity));
+
+      // balance check
+      if(Math.abs(data.totalAssets - data.totalLiabEq) > 0.005){ console.warn('Balance sheet does not balance by', data.totalAssets - data.totalLiabEq); }
+    }
+
+    function rowEl(label, val){ const tr = document.createElement('tr'); tr.innerHTML = `<td>${label}</td><td class="right">${format(val)}</td>`; return tr }
+
+    function exportCSV(){ const asOf = $id('asOfDate')?.value || new Date().toISOString().slice(0,10); const data = balanceAsOf(asOf); const rows = [['section,account,amount']]; data.assets.forEach(a=> rows.push(['asset', `"${a.label.replace(/"/g,'')}"`, a.amount].join(',')) ); data.liabilities.forEach(l=> rows.push(['liability', `"${l.label.replace(/"/g,'')}"`, l.amount].join(',')) ); data.equity.forEach(e=> rows.push(['equity', `"${e.label.replace(/"/g,'')}"`, e.amount].join(',')) ); const csv = rows.join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'balance_sheet.csv'; a.click(); URL.revokeObjectURL(url); }
+
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      try{
+        loadMappings();
+        // default as of today
+        $id('asOfDate').value = new Date().toISOString().slice(0,10);
+        $id('runBtn').addEventListener('click', buildBalanceSheet);
+        $id('refreshBtn').addEventListener('click', ()=>{ loadMappings(); buildBalanceSheet(); });
+        $id('addMap').addEventListener('click', addMapping);
+        $id('clearMaps').addEventListener('click', clearMappings);
+        $id('exportCsv').addEventListener('click', exportCSV);
+        // initial render
+        buildBalanceSheet();
+      }catch(err){ console.error('Init error', err); alert('Balance Sheet init error — check console'); }
+    });
+  </script>
+</body>
+</html>

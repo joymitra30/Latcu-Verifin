@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cash Book & Bank Reconciliation — Fixed</title>
+  <style>
+    /* (Same polished style as earlier; adjusted for button colors & safe visuals) */
+    :root{
+      --bg: linear-gradient(180deg,#f8fafc 0%, #eef2ff 100%);
+      --page-bg:#f6f8fb;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0f172a;
+      --brand-start:#3b82f6;
+      --brand-end:#1d4ed8;
+      --accent:#f59e0b;
+      --shadow: 0 8px 30px rgba(2,6,23,0.06);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased}
+    .wrap{max-width:1180px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+    h1{font-size:20px;margin:0;font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);border:1px solid rgba(15,23,42,0.04)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+    input[type=text],input[type=date],input[type=number],select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #e6edf3;font-size:14px}
+    textarea{min-height:60px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:700px){.grid-2{grid-template-columns:1fr}}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:600}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-start),var(--brand-end));color:white;box-shadow:0 6px 18px rgba(29,78,216,0.12);transition:transform .15s ease, box-shadow .15s ease}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(29,78,216,0.14)}
+    .btn-ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--brand-end);font-weight:700;padding:9px 12px;border-radius:10px}
+    .small{font-size:13px;padding:8px 10px;border-radius:10px}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#fbfdff}
+    .right{text-align:right}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#f4f7ff;color:var(--brand-end);font-weight:700;font-size:12px}
+    .pill.reconciled{background:linear-gradient(90deg,var(--accent),#fb923c);color:white}
+    .pill.unreconciled{background:#fff7ed;color:#92400e}
+    .flex{display:flex;gap:10px;align-items:center}
+    .muted-sm{font-size:12px;color:var(--muted)}
+    .page-accent{color:var(--accent);font-weight:700}
+    .summary{background:linear-gradient(180deg,#fffaf0, #fff7ed);border-radius:12px;padding:12px;border:1px solid rgba(245,158,11,0.06)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Cash Book & Bank Reconciliation</h1>
+        <div class="muted">Multi-currency cash book (TSH & USD). Import bank statements, match lines to cashbook entries and reconcile.</div>
+      </div>
+      <div class="flex">
+        <button class="btn btn-ghost small" id="exportJsonBtn">Export JSON</button>
+        <button class="btn btn-primary small" id="exportReconcileBtn">Export Reconciliation</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main class="card">
+        <section>
+          <h3 class="page-accent">Cash / Bank Entry</h3>
+          <form id="entryForm">
+            <div class="grid-2">
+              <div>
+                <label for="entryDate">Date</label>
+                <input id="entryDate" type="date" required />
+              </div>
+              <div>
+                <label for="entryType">Type</label>
+                <select id="entryType"><option value="inflow">Inflow</option><option value="outflow">Outflow</option></select>
+              </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:10px">
+              <div>
+                <label for="entryAccount">Account</label>
+                <select id="entryAccount"></select>
+              </div>
+              <div>
+                <label for="entryCurrency">Currency</label>
+                <select id="entryCurrency"><option value="TSH">TSH</option><option value="USD">USD</option></select>
+              </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:10px">
+              <div>
+                <label for="entryAmount">Amount</label>
+                <input id="entryAmount" type="number" step="0.01" required />
+              </div>
+              <div>
+                <label for="entryCounterAccount">Counter Account (GL)</label>
+                <select id="entryCounterAccount"></select>
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label for="entryDesc">Description</label>
+              <input id="entryDesc" type="text" placeholder="e.g. Cash deposit, customer payment" />
+            </div>
+
+            <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px">
+              <button type="button" class="btn btn-ghost small" id="resetEntryBtn">Reset</button>
+              <button type="submit" class="btn btn-primary small" id="saveEntryBtn">Save Entry</button>
+            </div>
+          </form>
+
+          <div style="margin-top:20px">
+            <h4 class="muted-sm">Cash Book Entries</h4>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+              <select id="filterAccount"></select>
+              <select id="filterCurrency"><option value="all">All Currencies</option><option value="TSH">TSH</option><option value="USD">USD</option></select>
+              <input id="filterQ" type="text" placeholder="search description" style="padding:8px;border-radius:10px;border:1px solid #eef2f7" />
+              <button class="btn btn-ghost small" id="autoMatchBtn">Auto-match</button>
+            </div>
+
+            <table id="entriesTable"><thead><tr><th>Date</th><th>Account</th><th>Description</th><th class="right">Amount</th><th>Curr</th><th>Matched</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+        </section>
+      </main>
+
+      <aside class="card">
+        <h3 class="page-accent">Bank Statements & Reconciliation</h3>
+
+        <div style="margin-top:6px">
+          <label for="stmtFile">Import Bank Statement (CSV)</label>
+          <input id="stmtFile" type="file" accept="text/csv" />
+          <div class="muted-sm" style="margin-top:8px">CSV: date,description,amount,currency (optional). Date format: YYYY-MM-DD</div>
+        </div>
+
+        <div style="margin-top:10px" class="grid-2">
+          <div>
+            <label for="stmtCurrency">Statement Currency</label>
+            <select id="stmtCurrency"><option value="TSH">TSH</option><option value="USD">USD</option></select>
+          </div>
+          <div>
+            <label for="fxRate">FX Rate (1 USD = ? TSH)</label>
+            <input id="fxRate" type="number" step="0.01" placeholder="e.g. 2500" />
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <h4 class="muted-sm">Statement Lines</h4>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <select id="stmtFilterCurr"><option value="all">All</option><option value="TSH">TSH</option><option value="USD">USD</option></select>
+            <input id="stmtSearch" type="text" placeholder="search description" style="padding:8px;border-radius:10px;border:1px solid #eef2f7" />
+            <button class="btn btn-ghost small" id="clearStatementsBtn">Clear</button>
+          </div>
+
+          <table id="statementsTable"><thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th><th>Curr</th><th>Matched</th><th></th></tr></thead><tbody></tbody></table>
+        </div>
+
+        <div style="margin-top:12px">
+          <h4 class="muted-sm">Reconciliation Summary</h4>
+          <div class="summary" style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between"><div class="muted-sm">Statement Total</div><div id="stmtTotal">0</div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px"><div class="muted-sm">Matched Total</div><div id="matchedTotal">0</div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px"><div class="muted-sm">Unmatched</div><div id="unmatchedTotal">0</div></div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-primary small" id="exportReconcileBtn2">Export Reconciliation</button>
+              <button class="btn btn-ghost small" id="unmatchAllBtn">Unmatch All</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Keys
+    const CASH_KEY = 'ts_demo_cashbook_v1';
+    const STMT_KEY = 'ts_demo_bankstatements_v1';
+    const REC_KEY = 'ts_demo_reconciliations_v1';
+    const GL_KEY = 'ts_demo_gl_v1';
+    const COA_KEY = 'coa_demo_accounts_v1';
+
+    // Data containers
+    let entries = [], statements = [], reconciliations = [], coa = [];
+
+    function genId(prefix='x'){ return prefix + Math.random().toString(36).slice(2,9) }
+
+    // safe element getter
+    function $id(id){ return document.getElementById(id) || null }
+
+    // Load COA and populate select boxes safely
+    function loadCOA(){
+      try {
+        coa = JSON.parse(localStorage.getItem(COA_KEY) || '[]');
+      } catch (e) { coa = [] }
+      const acctEls = ['entryAccount','entryCounterAccount','filterAccount'];
+      acctEls.forEach(id => {
+        const el = $id(id);
+        if (!el) return;
+        el.innerHTML = '<option value="">-- Select account --</option>';
+        coa.forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a.code || a.id;
+          opt.textContent = (a.code ? a.code + ' — ' : '') + a.name;
+          el.appendChild(opt);
+        });
+      });
+    }
+
+    function loadAll(){
+      try { entries = JSON.parse(localStorage.getItem(CASH_KEY) || '[]') } catch(e){ entries = [] }
+      try { statements = JSON.parse(localStorage.getItem(STMT_KEY) || '[]') } catch(e){ statements = [] }
+      try { reconciliations = JSON.parse(localStorage.getItem(REC_KEY) || '[]') } catch(e){ reconciliations = [] }
+      loadCOA();
+      renderEntries();
+      renderStatements();
+      renderReconciliationSummary();
+    }
+
+    // Save entry (guarded)
+    function saveEntryObj(eObj){
+      entries.push(eObj);
+      localStorage.setItem(CASH_KEY, JSON.stringify(entries));
+      postToGLFromEntry(eObj);
+      renderEntries(); renderStatements(); renderReconciliationSummary();
+    }
+
+    // Post to GL (simple two-line journal)
+    function postToGLFromEntry(eObj){
+      try {
+        const amt = Math.abs(eObj.amount);
+        let lines = [];
+        if (eObj.amount >= 0){
+          lines.push({account: eObj.account, dc:'debit', amount: amt, desc: eObj.description});
+          lines.push({account: eObj.counterAccount, dc:'credit', amount: amt, desc: eObj.description});
+        } else {
+          lines.push({account: eObj.counterAccount, dc:'debit', amount: amt, desc: eObj.description});
+          lines.push({account: eObj.account, dc:'credit', amount: amt, desc: eObj.description});
+        }
+        let journal = [];
+        try { journal = JSON.parse(localStorage.getItem(GL_KEY) || '[]') } catch(e){ journal = [] }
+        journal.push({ id: genId('j'), date: eObj.date, ref: 'CB-'+eObj.id, description: 'Cash book entry: '+(eObj.description||eObj.id), lines, totalDebit: amt, totalCredit: amt });
+        localStorage.setItem(GL_KEY, JSON.stringify(journal));
+      } catch(err){
+        console.warn('GL post failed', err);
+      }
+    }
+
+    // Render functions (safe)
+    function renderEntries(){
+      const tbody = $id('entriesTable')?.querySelector('tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const filterAcc = ($id('filterAccount')?.value) || '';
+      const curFilter = ($id('filterCurrency')?.value) || 'all';
+      const q = (($id('filterQ')?.value)||'').toLowerCase();
+      entries.slice().reverse().forEach(en => {
+        if (filterAcc && en.account !== filterAcc) return;
+        if (curFilter !== 'all' && en.currency !== curFilter) return;
+        if (q && !((en.description||'').toLowerCase().includes(q))) return;
+        const acc = coa.find(a => (a.code||a.id) === en.account);
+        const accLabel = acc ? ((acc.code?acc.code+' — ':'')+acc.name) : en.account;
+        const matched = reconciliations.find(r => r.entryId === en.id);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${en.date}</td><td>${accLabel}</td><td>${escapeHtml(en.description||'')}</td><td class="right">${Number(en.amount).toLocaleString()}</td><td>${en.currency}</td><td>${matched ? '<span class="pill reconciled">Yes</span>' : '<span class="pill unreconciled">No</span>'}</td><td style="text-align:right">${matched ? '<button class="btn btn-ghost small" data-unmatch="'+en.id+'">Unmatch</button>' : '<button class="btn btn-primary small" data-match="'+en.id+'">Match</button>'}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // delegate row buttons
+      tbody.querySelectorAll('[data-match]').forEach(btn => {
+        btn.onclick = () => openMatchPicker(btn.getAttribute('data-match'));
+      });
+      tbody.querySelectorAll('[data-unmatch]').forEach(btn => {
+        btn.onclick = () => unreconcileEntry(btn.getAttribute('data-unmatch'));
+      });
+    }
+
+    // Statements import & render
+    function handleStmtFile(ev){
+      try {
+        const f = ev?.target?.files?.[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => parseStmtCSV(reader.result);
+        reader.readAsText(f);
+      } catch(err){ console.error('Import failed', err); alert('Import failed — see console'); }
+    }
+
+    function parseStmtCSV(csv){
+      if (!csv) return;
+      const lines = csv.split('\n').map(l=>l.trim()).filter(Boolean);
+      const imported = [];
+      lines.forEach(line => {
+        // relaxed CSV parsing: try date,desc,amount,currency
+        const cols = line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+        const date = cols[0] || '';
+        const desc = cols[1] || '';
+        const amount = parseFloat((cols[2]||'0').replace(/[^0-9.-]/g,'')) || 0;
+        const currency = cols[3] || ($id('stmtCurrency')?.value) || 'TSH';
+        imported.push({ id: genId('s'), date, description: desc, amount, currency });
+      });
+      statements = (statements || []).concat(imported);
+      localStorage.setItem(STMT_KEY, JSON.stringify(statements));
+      renderStatements();
+      renderReconciliationSummary();
+      alert('Imported ' + imported.length + ' statement lines');
+    }
+
+    function renderStatements(){
+      const tbody = $id('statementsTable')?.querySelector('tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const cur = ($id('stmtFilterCurr')?.value) || 'all';
+      const q = (($id('stmtSearch')?.value)||'').toLowerCase();
+      statements.slice().reverse().forEach(st => {
+        if (cur !== 'all' && st.currency !== cur) return;
+        if (q && !((st.description||'').toLowerCase().includes(q))) return;
+        const matched = reconciliations.find(r => r.statementId === st.id);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${st.date}</td><td>${escapeHtml(st.description||'')}</td><td class="right">${Number(st.amount).toLocaleString()}</td><td>${st.currency}</td><td>${matched ? '<span class="pill reconciled">Yes</span>' : '<span class="pill unreconciled">No</span>'}</td><td style="text-align:right">${matched ? '<button class="btn btn-ghost small" data-unmatch-s="'+st.id+'">Unmatch</button>' : '<button class="btn btn-primary small" data-find="'+st.id+'">Find Match</button>'}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('[data-find]').forEach(btn => {
+        btn.onclick = () => openMatchSuggestions(btn.getAttribute('data-find'));
+      });
+      tbody.querySelectorAll('[data-unmatch-s]').forEach(btn => {
+        btn.onclick = () => unreconcileStatement(btn.getAttribute('data-unmatch-s'));
+      });
+
+      renderReconciliationSummary();
+    }
+
+    // Matching functions
+    function openMatchPicker(entryId){
+      const entry = entries.find(e => e.id === entryId);
+      if(!entry){ alert('Entry not found'); return; }
+      // try exact candidates
+      const candidates = statements.filter(s=> !reconciliations.find(r=> r.statementId===s.id) && s.currency===entry.currency && Math.abs(s.amount - entry.amount) < 0.01);
+      if(candidates.length === 0){
+        if (confirm('No exact matches. Attempt fuzzy match by absolute amount?')){
+          const fuzzy = statements.filter(s=> !reconciliations.find(r=> r.statementId===s.id) && Math.abs(Math.abs(s.amount) - Math.abs(entry.amount)) < 1);
+          if (fuzzy.length === 0){ alert('No fuzzy matches'); return; }
+          if (confirm('Match with ' + fuzzy[0].description + ' ' + fuzzy[0].amount + '?')) reconcilePair(entry.id, fuzzy[0].id);
+          return;
+        }
+        return;
+      }
+      if (confirm('Match entry with ' + candidates[0].description + ' ' + candidates[0].amount + '?')) reconcilePair(entry.id, candidates[0].id);
+    }
+
+    function openMatchSuggestions(statementId){
+      const st = statements.find(s => s.id === statementId);
+      if(!st){ alert('Statement not found'); return; }
+      const candidates = entries.filter(e => !reconciliations.find(r=> r.entryId===e.id) && e.currency===st.currency && Math.abs(e.amount - st.amount) < 0.01);
+      if(candidates.length === 0){
+        if (confirm('No exact matches. Attempt fuzzy match?')){
+          const fuzzy = entries.filter(e => !reconciliations.find(r=> r.entryId===e.id) && Math.abs(Math.abs(e.amount) - Math.abs(st.amount)) < 1);
+          if(fuzzy.length === 0){ alert('No fuzzy matches'); return; }
+          if(confirm('Match with ' + fuzzy[0].description + ' ' + fuzzy[0].amount + '?')) reconcilePair(fuzzy[0].id, st.id);
+          return;
+        }
+        return;
+      }
+      if(confirm('Match with ' + candidates[0].description + ' ' + candidates[0].amount + '?')) reconcilePair(candidates[0].id, st.id);
+    }
+
+    function reconcilePair(entryId, statementId){
+      if (reconciliations.find(r => r.entryId === entryId || r.statementId === statementId)){ alert('Already matched'); return; }
+      reconciliations.push({ id: genId('rec'), entryId, statementId, date: new Date().toISOString() });
+      localStorage.setItem(REC_KEY, JSON.stringify(reconciliations));
+      renderEntries(); renderStatements(); renderReconciliationSummary();
+      alert('Reconciled');
+    }
+
+    function unreconcileEntry(entryId){
+      const idx = reconciliations.findIndex(r=> r.entryId === entryId);
+      if(idx >= 0){ reconciliations.splice(idx,1); localStorage.setItem(REC_KEY, JSON.stringify(reconciliations)); renderEntries(); renderStatements(); renderReconciliationSummary(); }
+    }
+    function unreconcileStatement(statementId){
+      const idx = reconciliations.findIndex(r=> r.statementId === statementId);
+      if(idx >= 0){ reconciliations.splice(idx,1); localStorage.setItem(REC_KEY, JSON.stringify(reconciliations)); renderEntries(); renderStatements(); renderReconciliationSummary(); }
+    }
+    function unmatchAll(){ if(!confirm('Clear all reconciliations?')) return; reconciliations = []; localStorage.setItem(REC_KEY, JSON.stringify(reconciliations)); renderEntries(); renderStatements(); renderReconciliationSummary(); }
+
+    function renderReconciliationSummary(){
+      const stmtTotal = (statements || []).reduce((s,x)=> s + (x.amount||0), 0);
+      const matchedTotal = (reconciliations || []).reduce((s,r)=>{ const st = statements.find(x=> x.id===r.statementId); return s + (st ? (st.amount||0) : 0) }, 0);
+      const unmatched = stmtTotal - matchedTotal;
+      if ($id('stmtTotal')) $id('stmtTotal').textContent = Number(stmtTotal).toLocaleString();
+      if ($id('matchedTotal')) $id('matchedTotal').textContent = Number(matchedTotal).toLocaleString();
+      if ($id('unmatchedTotal')) $id('unmatchedTotal').textContent = Number(unmatched).toLocaleString();
+    }
+
+    function autoMatchAll(){
+      let matches = 0;
+      entries.forEach(e=>{
+        if (reconciliations.find(r=> r.entryId === e.id)) return;
+        const cand = statements.find(s=> !reconciliations.find(r=> r.statementId===s.id) && s.currency===e.currency && Math.abs(s.amount - e.amount) < 0.01);
+        if (cand){ reconcilePair(e.id, cand.id); matches++; }
+      });
+      alert('Auto-matched ' + matches + ' items');
+    }
+
+    function clearStatements(){ if(!confirm('Remove all imported statements?')) return; statements=[]; localStorage.setItem(STMT_KEY, JSON.stringify(statements)); renderStatements(); renderReconciliationSummary(); }
+
+    function exportReconciliation(){
+      const rows = [['recId,entryId,entryDate,entryAmount,stmtId,stmtDate,stmtAmount,currency'].join(',')];
+      reconciliations.forEach(r=>{
+        const e = entries.find(x=> x.id===r.entryId);
+        const s = statements.find(x=> x.id===r.statementId);
+        rows.push([r.id, e?e.id:'', e?e.date:'', e?e.amount:'', s?s.id:'', s?s.date:'', s?s.amount:'', s?s.currency:''].join(','));
+      });
+      const csv = rows.join('\n');
+      const blob = new Blob([csv],{type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'reconciliation.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function exportData(){
+      const data = { entries, statements, reconciliations };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'cashbook_data.json'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // --- Initialization and safe event hookup ---
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        loadAll();
+
+        // connect UI controls safely
+        const entryForm = $id('entryForm');
+        if (entryForm){
+          entryForm.addEventListener('submit', (ev) => {
+            ev.preventDefault();
+            const date = ($id('entryDate')?.value) || (new Date().toISOString().slice(0,10));
+            const type = ($id('entryType')?.value) || 'inflow';
+            const account = ($id('entryAccount')?.value) || '';
+            const currency = ($id('entryCurrency')?.value) || 'TSH';
+            const amount = parseFloat(($id('entryAmount')?.value) || '0') || 0;
+            const counter = ($id('entryCounterAccount')?.value) || '';
+            const desc = ($id('entryDesc')?.value) || '';
+            if (!account || !counter || amount <= 0){ alert('Fill date, account, counter account and amount'); return; }
+            const eObj = { id: genId('c'), date, account, currency, amount: type==='outflow' ? -Math.abs(amount) : Math.abs(amount), type, counterAccount: counter, description: desc, createdAt: new Date().toISOString() };
+            saveEntryObj(eObj);
+            entryForm.reset();
+          });
+        }
+
+        const resetBtn = $id('resetEntryBtn'); if (resetBtn) resetBtn.onclick = () => { if ($id('entryForm')) $id('entryForm').reset(); };
+
+        // file import
+        const stmtEl = $id('stmtFile'); if (stmtEl) stmtEl.addEventListener('change', handleStmtFile);
+
+        // other buttons
+        const autoBtn = $id('autoMatchBtn'); if (autoBtn) autoBtn.addEventListener('click', autoMatchAll);
+        const clearBtn = $id('clearStatementsBtn'); if (clearBtn) clearBtn.addEventListener('click', clearStatements);
+        const exportBtn = $id('exportJsonBtn'); if (exportBtn) exportBtn.addEventListener('click', exportData);
+        const exportRecBtn = $id('exportReconcileBtn'); if (exportRecBtn) exportRecBtn.addEventListener('click', exportReconciliation);
+        const exportRecBtn2 = $id('exportReconcileBtn2'); if (exportRecBtn2) exportRecBtn2.addEventListener('click', exportReconciliation);
+        const unmatchAllBtn = $id('unmatchAllBtn'); if (unmatchAllBtn) unmatchAllBtn.addEventListener('click', unmatchAll);
+
+        // filter inputs
+        const filterQ = $id('filterQ'); if (filterQ) filterQ.addEventListener('input', renderEntries);
+        const filterCurrency = $id('filterCurrency'); if (filterCurrency) filterCurrency.addEventListener('change', renderEntries);
+        const filterAccount = $id('filterAccount'); if (filterAccount) filterAccount.addEventListener('change', renderEntries);
+
+        const stmtFilter = $id('stmtFilterCurr'); if (stmtFilter) stmtFilter.addEventListener('change', renderStatements);
+        const stmtSearch = $id('stmtSearch'); if (stmtSearch) stmtSearch.addEventListener('input', renderStatements);
+
+        console.info('Cash book initialized (safe mode).');
+      } catch (err) {
+        console.error('Initialization error:', err);
+        alert('Initialization error — open the developer console and paste the error here so I can debug further.');
+      }
+    });
+  </script>
+</body>
+</html>

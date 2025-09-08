@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Create Budget - ThinkShip ERP</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--muted:#6b7280;--brand:#6366f1}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial; background:var(--bg); color:#0f172a;margin:0;padding:24px}
+    .container{max-width:1100px;margin:0 auto}
+    h1{font-size:20px;margin-bottom:6px}
+    .muted{color:var(--muted)}
+    .layout{display:grid;grid-template-columns:1fr 420px;gap:16px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 4px 24px rgba(15,23,42,0.06)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text], select, textarea{width:100%;padding:10px;border:1px solid #e6edf3;border-radius:8px;font-size:14px}
+    textarea{min-height:80px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    button{background:var(--brand);color:#fff;padding:10px 12px;border-radius:8px;border:0;cursor:pointer}
+    button.ghost{background:transparent;color:var(--brand);border:1px solid rgba(99,102,241,0.12)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:13px}
+    th{color:var(--muted);background:#fbfdff}
+    .month-input{width:100%;padding:8px;border-radius:6px;border:1px solid #eef2f7;text-align:right}
+    .total {font-weight:700;text-align:right}
+    .small{font-size:13px;padding:8px 10px;border-radius:8px}
+    .hint{font-size:13px;color:var(--muted);margin-top:8px}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <h1>Create Budget</h1>
+        <div class="muted">Create budgets, allocate monthly amounts and link to accounts or cost centers.</div>
+      </div>
+      <div>
+        <button class="ghost small" onclick="importCSV()">Import CSV</button>
+        <button class="ghost small" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="card">
+        <form id="budgetForm" onsubmit="return saveBudget(event)">
+          <div class="grid2">
+            <div>
+              <label for="budgetName">Budget Name</label>
+              <input id="budgetName" name="budgetName" type="text" required placeholder="e.g. Marketing FY2026" />
+            </div>
+            <div>
+              <label for="fiscalYear">Fiscal Year</label>
+              <select id="fiscalYear" name="fiscalYear" required>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <div style="flex:1">
+              <label for="dept">Department / Cost Center</label>
+              <input id="dept" name="dept" type="text" placeholder="e.g. Sales, Ops" />
+            </div>
+            <div style="width:220px">
+              <label for="currency">Currency</label>
+              <select id="currency" name="currency">
+                <option value="TSH">TSH</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <label for="budgetCategory">Budget Category</label>
+            <input id="budgetCategory" name="budgetCategory" type="text" placeholder="e.g. Operational, CapEx" />
+          </div>
+
+          <div style="margin-top:12px">
+            <label for="linkedAccount">Linked Account (Chart of Accounts)</label>
+            <select id="linkedAccount"></select>
+            <div class="hint">Pick an account code from Chart of Accounts (imports from local demo).</div>
+          </div>
+
+          <div style="margin-top:14px">
+            <label>Monthly Allocation</label>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:32%">Month</th>
+                  <th style="width:68%;text-align:right">Amount</th>
+                </tr>
+              </thead>
+              <tbody id="monthsTbody"></tbody>
+              <tfoot>
+                <tr>
+                  <td class="total">Total</td>
+                  <td class="total" id="budgetTotal">0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div style="margin-top:12px">
+            <label for="notes">Description / Notes</label>
+            <textarea id="notes" name="notes" placeholder="Optional notes about this budget"></textarea>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="ghost" onclick="resetForm()">Reset</button>
+            <button type="submit">Save Budget</button>
+          </div>
+        </form>
+
+        <div style="margin-top:18px">
+          <h3 style="margin-bottom:8px">Saved Budgets</h3>
+          <table id="budgetsTable">
+            <thead>
+              <tr><th>Name</th><th>Year</th><th>Dept</th><th>Category</th><th style="text-align:right">Total</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="card">
+        <h3>Budget Summary</h3>
+        <div style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px"><div class="muted">Selected Budget</div><div id="summaryName">—</div></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px"><div class="muted">Fiscal Year</div><div id="summaryYear">—</div></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px"><div class="muted">Linked Account</div><div id="summaryAccount">—</div></div>
+          <div style="display:flex;justify-content:space-between;font-weight:700"><div>Total</div><div id="summaryTotal">0</div></div>
+        </div>
+
+        <div style="margin-top:14px">
+          <h4 style="margin-bottom:8px">Quick Actions</h4>
+          <button class="small" onclick="duplicateBudget()" style="width:100%;margin-bottom:8px">Duplicate Selected</button>
+          <button class="small" onclick="deleteSelected()" style="width:100%;margin-bottom:8px">Delete Selected</button>
+          <div class="hint">Tip: select a budget from the list to view and act on it.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Simple client-side module. Persists budgets in localStorage for demo.
+    const STORAGE_KEY = 'ts_demo_budgets_v1';
+    const COA_KEY = 'coa_demo_accounts_v1'; // reads from the Chart-of-accounts demo
+    let budgets = [];
+    let coa = [];
+    let selectedBudgetId = null;
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function genId(){ return 'b'+Math.random().toString(36).slice(2,9) }
+
+    function loadCOA(){
+      try{ coa = JSON.parse(localStorage.getItem(COA_KEY) || '[]');
+      }catch(e){ coa = [] }
+      const sel = document.getElementById('linkedAccount');
+      sel.innerHTML = '<option value="">-- Select account --</option>';
+      coa.forEach(a => {
+        const opt = document.createElement('option'); opt.value = a.code || a.id; opt.textContent = (a.code? a.code + ' — ' : '') + a.name;
+        sel.appendChild(opt);
+      });
+    }
+
+    function initMonths(){
+      const tbody = document.getElementById('monthsTbody'); tbody.innerHTML='';
+      for(let i=0;i<12;i++){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${months[i]}</td><td><input class="month-input" type="number" step="0.01" value="0" data-month="${i}" oninput="recalcTotal()" /></td>`;
+        tbody.appendChild(tr);
+      }
+      recalcTotal();
+    }
+
+    function recalcTotal(){
+      const inputs = document.querySelectorAll('.month-input');
+      let total = 0; inputs.forEach(i=> total += parseFloat(i.value||0));
+      document.getElementById('budgetTotal').textContent = Number(total).toLocaleString(undefined,{maximumFractionDigits:2});
+    }
+
+    function loadBudgets(){
+      budgets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      renderBudgetsTable();
+    }
+
+    function renderBudgetsTable(){
+      const tbody = document.querySelector('#budgetsTable tbody'); tbody.innerHTML = '';
+      budgets.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(b.name)}</td><td>${b.year}</td><td>${escapeHtml(b.dept||'—')}</td><td>${escapeHtml(b.category||'—')}</td><td style="text-align:right">${Number(b.total).toLocaleString()}</td><td style="text-align:right"><button class="small ghost" onclick="selectBudget('${b.id}')">Select</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function saveBudget(e){
+      if(e) e.preventDefault();
+      const name = document.getElementById('budgetName').value.trim();
+      const year = document.getElementById('fiscalYear').value;
+      const dept = document.getElementById('dept').value.trim();
+      const currency = document.getElementById('currency').value;
+      const category = document.getElementById('budgetCategory').value.trim();
+      const linkedAccount = document.getElementById('linkedAccount').value;
+      const notes = document.getElementById('notes').value.trim();
+      const amounts = Array.from(document.querySelectorAll('.month-input')).map(i=> parseFloat(i.value||0));
+      const total = amounts.reduce((s,n)=> s + n, 0);
+
+      if(!name){ alert('Please provide a budget name'); return false }
+
+      const obj = { id: genId(), name, year, dept, currency, category, linkedAccount, notes, amounts, total };
+      budgets.push(obj);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(budgets));
+      renderBudgetsTable(); resetForm();
+      return false;
+    }
+
+    function selectBudget(id){
+      const b = budgets.find(x=>x.id===id); if(!b) return;
+      selectedBudgetId = id;
+      document.getElementById('summaryName').textContent = b.name;
+      document.getElementById('summaryYear').textContent = b.year;
+      const acct = coa.find(a=> (a.code||a.id) === b.linkedAccount);
+      document.getElementById('summaryAccount').textContent = acct ? ((acct.code? acct.code+' — ':'') + acct.name) : '—';
+      document.getElementById('summaryTotal').textContent = Number(b.total).toLocaleString();
+
+      // highlight in table (simple)
+      document.querySelectorAll('#budgetsTable tbody tr').forEach(tr=> tr.style.background='');
+      const rows = Array.from(document.querySelectorAll('#budgetsTable tbody tr'));
+      const idx = budgets.findIndex(x=>x.id===id);
+      if(rows[idx]) rows[idx].style.background='rgba(99,102,241,0.04)';
+    }
+
+    function deleteSelected(){
+      if(!selectedBudgetId){ alert('Select a budget first'); return }
+      if(!confirm('Delete selected budget?')) return;
+      budgets = budgets.filter(b=>b.id!==selectedBudgetId); localStorage.setItem(STORAGE_KEY, JSON.stringify(budgets)); selectedBudgetId = null; renderBudgetsTable(); resetSummary();
+    }
+
+    function duplicateBudget(){
+      if(!selectedBudgetId){ alert('Select a budget first'); return }
+      const b = budgets.find(x=>x.id===selectedBudgetId); if(!b) return;
+      const clone = {...b, id: genId(), name: b.name + ' (copy)'}; budgets.push(clone); localStorage.setItem(STORAGE_KEY, JSON.stringify(budgets)); renderBudgetsTable();
+    }
+
+    function resetForm(){ document.getElementById('budgetForm').reset(); initMonths(); document.getElementById('linkedAccount').value=''; }
+    function resetSummary(){ document.getElementById('summaryName').textContent='—'; document.getElementById('summaryYear').textContent='—'; document.getElementById('summaryAccount').textContent='—'; document.getElementById('summaryTotal').textContent='0'; }
+
+    function importCSV(){ alert('CSV import: paste CSV with columns: name,year,dept,category,linkedAccount,amount1..amount12');
+      const raw = prompt('Paste CSV rows (first row headers optional)'); if(!raw) return; const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+      lines.forEach(line => {
+        const cols = line.split(',').map(c=>c.trim());
+        if(cols.length>=18){ // name,year,dept,category,linkedAccount,12 months
+          const [name,year,dept,category,linkedAccount,...m] = cols; const amounts = m.slice(0,12).map(x=>parseFloat(x||0)); const total = amounts.reduce((s,n)=>s+n,0);
+          budgets.push({id:genId(),name,year,dept,category,linkedAccount,amounts,total});
+        }
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(budgets)); renderBudgetsTable();
+    }
+
+    function exportCSV(){
+      const headers = ['name','year','dept','category','linkedAccount',...months.map(m=>'m_'+m)];
+      const rows = budgets.map(b=> [b.name,b.year,b.dept,b.category,b.linkedAccount, ...b.amounts.map(n=>n||0)] );
+      const csv = [headers.join(','), ...rows.map(r=> r.map(v=> '"'+String(v).replace(/"/g,'""')+'"').join(','))].join('\n');
+      const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='budgets.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    // small helper
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // init
+    document.addEventListener('DOMContentLoaded', ()=>{ loadCOA(); initMonths(); loadBudgets(); });
+  </script>
+</body>
+</html>
