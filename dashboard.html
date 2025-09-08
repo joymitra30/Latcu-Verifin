@@ -1,466 +1,102 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ThinkShip ERP Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ThinkShip ERP — Menu</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Mobile Sidebar Overlay -->
-  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
-
-  <!-- Sidebar -->
-  <nav class="sidebar" id="sidebar" role="navigation" aria-label="Primary">
+  <div class="sidebar" id="sidebar" role="navigation" aria-label="Primary">
     <div class="sidebar-header">
-      <div class="logo-small" aria-hidden="true">TS</div>
-      <div class="company-name">ThinkShip ERP</div>
+      <div class="logo">TS</div>
+      <div class="company">ThinkShip ERP</div>
     </div>
 
-    <div class="menu-section" id="menuSection">
+    <div class="menu">
+      <!-- Accounting Core -->
+      <div class="menu-item">
+        <button class="menu-toggle" aria-expanded="false" aria-controls="acct-panel">
+          <span class="icon">💰</span>
+          <span class="label" data-i18n="menu.accounting">Accounting Core</span>
+          <span class="caret">▶</span>
+        </button>
+
+        <div class="panel" id="acct-panel" aria-hidden="true">
+          <button class="nav-item" data-page="General Ledger" data-i18n="acct.generalLedger">General Ledger</button>
+          <button class="nav-item" data-page="Accounts Receivable" data-i18n="acct.accountsReceivable">Accounts Receivable</button>
+          <button class="nav-item" data-page="Accounts Payable" data-i18n="acct.accountsPayable">Accounts Payable</button>
+          <button class="nav-item" data-page="Bank Ledger" data-i18n="acct.bankLedger">Bank Ledger</button>
+          <button class="nav-item" data-page="Audit Trail" data-i18n="acct.auditTrail">Audit Trail</button>
+          <button class="nav-item" data-page="Expense Management" data-i18n="acct.expenseManagement">Expense Management</button>
+          <button class="nav-item" data-page="Cash Book (TSH & USD)" data-i18n="acct.cashBook">Cash Book (Multi-Currency: TSH & USD)</button>
+        </div>
+      </div>
+
+      <!-- Budgeting & Planning -->
+      <div class="menu-item">
+        <button class="menu-toggle" aria-expanded="false" aria-controls="budget-panel">
+          <span class="icon">📈</span>
+          <span class="label" data-i18n="menu.budgeting">Budgeting & Planning</span>
+          <span class="caret">▶</span>
+        </button>
+
+        <div class="panel" id="budget-panel" aria-hidden="true">
+          <button class="nav-item" data-page="Budget Creation & Planning" data-i18n="budget.create">Budget Creation & Planning</button>
+          <button class="nav-item" data-page="Customizable Categories" data-i18n="budget.categories">Customizable Categories</button>
+          <button class="nav-item" data-page="Expense Tracking" data-i18n="budget.expenseTracking">Expense Tracking</button>
+          <button class="nav-item" data-page="Income Management" data-i18n="budget.incomeManagement">Income Management</button>
+          <button class="nav-item" data-page="Budget Analysis" data-i18n="budget.analysis">Budget Analysis</button>
+        </div>
+      </div>
+
       <!-- Reports -->
       <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">📊</span>
-          <span class="menu-text" data-i18n="menu.reports">Reports</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.reports">Reports</div>
+        <button class="menu-toggle" aria-expanded="false" aria-controls="reports-panel">
+          <span class="icon">📊</span>
+          <span class="label" data-i18n="menu.reports">Reports</span>
+          <span class="caret">▶</span>
         </button>
-        <div class="submenu" aria-hidden="true">
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.accounting">Accounting</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-                <button class="subsubmenu-item" data-i18n="subsubmenu.quotations" onclick="loadPage(this,'Quotations')">Quotations</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.salesOrders" onclick="loadPage(this,'Sales Orders')">Sales Orders</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.deliveryNotes" onclick="loadPage(this,'Delivery Notes')">Delivery Notes</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.invoices" onclick="loadPage(this,'Invoices')">Invoices</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.trialBalance" onclick="loadPage(this,'Trial Balance')">Trial Balance</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.trialBalanceComparison" onclick="loadPage(this,'Trial Balance Comparison')">Trial Balance Comparison</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.incomeStatement" onclick="loadPage(this,'Income Statement')">Income Statement</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.balanceSheet" onclick="loadPage(this,'Balance Sheet')">Balance Sheet</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.balanceSheetComparison" onclick="loadPage(this,'Balance Sheet Comparison')">Balance Sheet Comparison</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.ownersEquitySummary" onclick="loadPage(this,'Owner\'s Equity Summary')">Owner's Equity Summary</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.generalLedger" onclick="loadPage(this,'General Ledger')">General Ledger</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.cashBook" onclick="loadPage(this,'Cash Book')">Cash Book</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.cashFlow" onclick="loadPage(this,'Cash Flow')">Cash Flow</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.detailedOwnersEquity" onclick="loadPage(this,'Detailed Owner\'s Equity')">Detailed Owner's Equity</button>
-                <button class="subsubmenu-item" data-i18n="subsubmenu.budgetComparison" onclick="loadPage(this,'Budget Comparison')">Budget Comparison</button>
-            </div>
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.customers">Customers</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.customerManagement" onclick="loadPage(this,'Customer Management')">Customer Management</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.customerGroups" onclick="loadPage(this,'Customer Groups')">Customer Groups</button>
-            </div>
-          </div>
 
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.inventory">Inventory</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.supplierPerformance" onclick="loadPage(this,'Supplier Performance Report')">Supplier Performance Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.reorderReport" onclick="loadPage(this,'Reorder Report')">Reorder Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.stockTaking" onclick="loadPage(this,'Stock Taking Report')">Stock Taking Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.outOfStock" onclick="loadPage(this,'Out of Stock Report')">Out of Stock Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.stockAging" onclick="loadPage(this,'Stock Aging Report')">Stock Aging Report</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.assets">Assets</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.assetRegistry" onclick="loadPage(this,'Asset Registry Report')">Asset Registry Report</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.recruitment">Recruitment</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.applicationSource" onclick="loadPage(this,'Application Source Report')">Application Source Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.interviewActivities" onclick="loadPage(this,'Interview Activities Report')">Interview Activities Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.recruitmentSummary" onclick="loadPage(this,'Recruitment Summary Report')">Recruitment Summary Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.offersReport" onclick="loadPage(this,'Offers Report')">Offers Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.applicationPipeline" onclick="loadPage(this,'Application Pipeline Report')">Application Pipeline Report</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Inventory top-level -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">📦</span>
-          <span class="menu-text" data-i18n="menu.inventory">Inventory</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.inventory">Inventory</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <button class="submenu-item" data-i18n="submenu.inventory.summary" onclick="loadPage(this,'Inventory Summary')">Summary</button>
-          <button class="submenu-item" data-i18n="submenu.inventory.pos" onclick="loadPage(this,'Point of Sale')">Point of Sale</button>
-          <button class="submenu-item" data-i18n="submenu.inventory.stock_in" onclick="loadPage(this,'Stock In')">Stock In</button>
-          <button class="submenu-item" data-i18n="submenu.inventory.stock_out" onclick="loadPage(this,'Stock Out')">Stock Out</button>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.inventory.configurations">Configurations</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.inventory.stores" onclick="loadPage(this,'Stores')">Stores</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.inventory.suppliers" onclick="loadPage(this,'Suppliers')">Suppliers</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.inventory.trucks" onclick="loadPage(this,'Trucks')">Trucks</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.inventory.drivers" onclick="loadPage(this,'Drivers')">Drivers</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.inventory.item_categories" onclick="loadPage(this,'Item Categories')">Item Categories</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.inventory.items" onclick="loadPage(this,'Items')">Items</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.inventory.units" onclick="loadPage(this,'Units of Measurements')">Units of Measurements</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Requisitions -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">📋</span>
-          <span class="menu-text" data-i18n="menu.requisitions">Requisitions</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.requisitions">Requisitions</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <button class="submenu-item" data-i18n="submenu.requisitions.expense" onclick="loadPage(this,'Expense Requisitions')">Expense Requisitions</button>
-          <button class="submenu-item" data-i18n="submenu.requisitions.fuel" onclick="loadPage(this,'Fuel Requisitions')">Fuel Requisitions</button>
-          <button class="submenu-item" data-i18n="submenu.requisitions.store" onclick="loadPage(this,'Store Requisitions')">Store Requisitions</button>
-          <button class="submenu-item" data-i18n="submenu.requisitions.cash" onclick="loadPage(this,'Cash Requisitions Details')">Cash Requisitions Details</button>
-        </div>
-      </div>
-
-      <!-- Accounts -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">💰</span>
-          <span class="menu-text" data-i18n="menu.accounts">Accounts</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.accounts">Accounts</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.budgeting">Budgeting & Planning</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.createBudget" onclick="loadPage(this,'Create Budget')">Create Budget</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.budgetAnalysis" onclick="loadPage(this,'Budget Analysis')">Budget Analysis</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.budgetVsActual" onclick="loadPage(this,'Budget vs Actual')">Budget vs. Actual Report</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.projectionReports" onclick="loadPage(this,'Projection Reports')">Projection Reports</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.transactions">Transactions</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.expenseManagement" onclick="loadPage(this,'Expense Management')">Expense Management</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.incomeManagement" onclick="loadPage(this,'Income Management')">Income Management</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.internalCashTransfer" onclick="loadPage(this,'Internal Cash Transfer')">Internal Cash Transfer</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.otherTransactions" onclick="loadPage(this,'Other Transactions')">Other Transactions</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.ledgerReconciliation">Ledger & Reconciliation</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.generalLedger" onclick="loadPage(this,'General Ledger')">General Ledger</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.accountsPayable" onclick="loadPage(this,'Accounts Payable')">Accounts Payable</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.accountsReceivable" onclick="loadPage(this,'Accounts Receivable')">Accounts Receivable</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.cashBook" onclick="loadPage(this,'Cash Book')">Cash Book (TSH & USD)</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.bankReconciliation" onclick="loadPage(this,'Bank Reconciliation')">Bank Reconciliation</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.reportsShort">Reports</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.incomeStatement" onclick="loadPage(this,'Income Statement')">Income Statement</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.balanceSheet" onclick="loadPage(this,'Balance Sheet')">Balance Sheet</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.cashFlow" onclick="loadPage(this,'Cash Flow Statement')">Cash Flow Statement</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.statementChangeEquity" onclick="loadPage(this,'Statement of Changes in Equity')">Statement of Change in Equity</button>
-            </div>
-          </div>
-
-          <button class="submenu-item" data-i18n="submenu.chartOfAccounts" onclick="loadPage(this,'Chart of Accounts')">Chart of Accounts</button>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.configurations">Configurations</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.categories" onclick="loadPage(this,'Categories')">Categories</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.subCategories" onclick="loadPage(this,'Sub Categories')">Sub Categories</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.fiscalYears" onclick="loadPage(this,'Fiscal Years')">Fiscal Years</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.currencies" onclick="loadPage(this,'Currencies')">Currencies</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.paymentMethods" onclick="loadPage(this,'Payment Methods')">Payment Methods</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Budgets -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">📈</span>
-          <span class="menu-text" data-i18n="menu.budgets">Budgets</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.budgets">Budgets</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <button class="submenu-item" data-i18n="submenu.budgets" onclick="loadPage(this,'Budgets')">Budgets</button>
-          <button class="submenu-item" data-i18n="submenu.budgetCategories" onclick="loadPage(this,'Budget Categories')">Budget Categories</button>
-        </div>
-      </div>
-
-      <!-- Procurement, Manufacturing, Sales, HR, Settings... (same pattern) -->
-      <!-- Procurement -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">🛒</span>
-          <span class="menu-text" data-i18n="menu.procurement">Procurement</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.procurement">Procurement</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.procurement.configurations">Configurations</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.types" onclick="loadPage(this,'Procurement Types')">Procurement Types</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.services" onclick="loadPage(this,'Services')">Services</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.requests" onclick="loadPage(this,'Purchase Requests')">Purchase Requests</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.procurement.operations">General Operations</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.rfq" onclick="loadPage(this,'Requests for Quotation')">Requests for Quotation</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.supplierQuotes" onclick="loadPage(this,'Supplier Quotations')">Supplier Quotations</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.orders" onclick="loadPage(this,'Purchase Orders')">Purchase Orders</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.received" onclick="loadPage(this,'Goods Received')">Goods Received</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.procurement.more">More</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.procurement.evaluation" onclick="loadPage(this,'Evaluation Criteria')">Evaluation Criteria</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Manufacturing -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">🏭</span>
-          <span class="menu-text" data-i18n="menu.manufacturing">Manufacturing</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.manufacturing">Manufacturing</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.manufacturing.management">Manufacturing Management</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.manufacturing.workstations" onclick="loadPage(this,'Work Stations')">Work Stations</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.manufacturing.machines" onclick="loadPage(this,'Machines')">Machines</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.manufacturing.orders" onclick="loadPage(this,'Production Orders')">Production Orders</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.manufacturing.settings" onclick="loadPage(this,'Settings')">Settings</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sales -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">💼</span>
-          <span class="menu-text" data-i18n="menu.sales">Sales</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.sales">Sales</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.sales.general">General</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.sales.overview" onclick="loadPage(this,'Sales Overview')">Sales Overview</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.sales.reports" onclick="loadPage(this,'Sales Reports')">Sales Reports</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- HR Management -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">👥</span>
-          <span class="menu-text" data-i18n="menu.hr">HR Management</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.hr">HR Management</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.hr.employees">Employees</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.hr.employeeManagement" onclick="loadPage(this,'Employee Management')">Employee Management</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.hr.attendance" onclick="loadPage(this,'Attendance')">Attendance</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.hr.leave" onclick="loadPage(this,'Leave Management')">Leave Management</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.hr.payroll" onclick="loadPage(this,'Payroll')">Payroll</button>
-            </div>
-          </div>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.hr.recruitment">Recruitment</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.hr.jobPostings" onclick="loadPage(this,'Job Postings')">Job Postings</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.hr.applications" onclick="loadPage(this,'Applications')">Applications</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.hr.interviews" onclick="loadPage(this,'Interviews')">Interviews</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings -->
-      <div class="menu-item">
-        <button class="menu-toggle-btn" onclick="toggleMenu(this)" aria-expanded="false">
-          <span class="menu-icon" aria-hidden="true">⚙️</span>
-          <span class="menu-text" data-i18n="menu.settings">Settings</span>
-          <span class="menu-arrow" aria-hidden="true">▶</span>
-          <div class="menu-tooltip" data-i18n="menu.settings">Settings</div>
-        </button>
-        <div class="submenu" aria-hidden="true">
-          <button class="submenu-item" data-i18n="submenu.settings.userManagement" onclick="loadPage(this,'User Management')">User Management</button>
-
-          <div class="submenu-item">
-            <button class="submenu-toggle" onclick="toggleSubMenu(this)" aria-expanded="false">
-              <span data-i18n="submenu.settings.system">System</span>
-              <span class="submenu-arrow" aria-hidden="true">▶</span>
-            </button>
-            <div class="subsubmenu" aria-hidden="true">
-              <button class="subsubmenu-item" data-i18n="subsubmenu.settings.systemConfig" onclick="loadPage(this,'System Configuration')">System Configuration</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.settings.backup" onclick="loadPage(this,'Backup & Restore')">Backup & Restore</button>
-              <button class="subsubmenu-item" data-i18n="subsubmenu.settings.auditLogs" onclick="loadPage(this,'Audit Logs')">Audit Logs</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <div class="main-content">
-    <div class="topbar">
-      <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">☰</button>
-      <h1 class="page-title" data-i18n="title.dashboard">Dashboard</h1>
-      <div class="topbar-actions">
-        <div class="language-toggle" role="group" aria-label="Language switcher">
-          <button class="lang-btn active" onclick="switchLanguage(this,'en')" aria-pressed="true">EN</button>
-          <button class="lang-btn" onclick="switchLanguage(this,'sw')" aria-pressed="false">SW</button>
-        </div>
-        <button class="logout-btn" id="logoutBtn" data-i18n="action.logout" onclick="logout()">Logout</button>
-      </div>
-    </div>
-
-    <div class="dashboard-content">
-      <div class="welcome-card">
-        <h2 class="welcome-title" data-i18n="welcome.title">Welcome to ThinkShip ERP</h2>
-        <p class="welcome-subtitle" data-i18n="welcome.subtitle">Manage your business operations efficiently with our comprehensive ERP solution.</p>
-      </div>
-
-      <div class="stats-grid" role="list">
-        <div class="stat-card" role="listitem">
-          <div class="stat-header">
-            <div class="stat-icon stat-icon--green">💰</div>
-            <div>
-              <div class="stat-value">$125,430</div>
-              <div class="stat-label" data-i18n="stats.revenue">Total Revenue</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card" role="listitem">
-          <div class="stat-header">
-            <div class="stat-icon stat-icon--blue">📦</div>
-            <div>
-              <div class="stat-value">1,247</div>
-              <div class="stat-label" data-i18n="stats.stock">Products in Stock</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card" role="listitem">
-          <div class="stat-header">
-            <div class="stat-icon stat-icon--amber">📋</div>
-            <div>
-              <div class="stat-value">89</div>
-              <div class="stat-label" data-i18n="stats.orders">Pending Orders</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card" role="listitem">
-          <div class="stat-header">
-            <div class="stat-icon stat-icon--purple">👥</div>
-            <div>
-              <div class="stat-value">156</div>
-              <div class="stat-label" data-i18n="stats.users">Active Users</div>
-            </div>
-          </div>
+        <div class="panel" id="reports-panel" aria-hidden="true">
+          <button class="nav-item" data-page="Trial Balance & Comparison" data-i18n="reports.trial">Trial Balance & Comparison</button>
+          <button class="nav-item" data-page="Income Statement" data-i18n="reports.income">Income Statement</button>
+          <button class="nav-item" data-page="Balance Sheet & Comparison" data-i18n="reports.balance">Balance Sheet & Comparison</button>
+          <button class="nav-item" data-page="Cash Flow Statement" data-i18n="reports.cashflow">Cash Flow Statement</button>
+          <button class="nav-item" data-page="Equity & Budget Comparison" data-i18n="reports.equityBudget">Equity & Budget Comparison</button>
+          <button class="nav-item" data-page="Bank Reconciliation" data-i18n="reports.bankReconcile">Bank Reconciliation</button>
+          <button class="nav-item" data-page="Statement of Change in Equity" data-i18n="reports.changeEquity">Statement of Change in Equity</button>
+          <button class="nav-item" data-page="Budget vs Actual Report" data-i18n="reports.budgetVsActual">Budget vs. Actual Report</button>
+          <button class="nav-item" data-page="Projection Reports" data-i18n="reports.projection">Projection Reports</button>
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="hamb">☰</div>
+      <h1 class="title" id="pageTitle">Dashboard</h1>
+
+      <div class="right-controls">
+        <div class="lang-switch">
+          <button class="lang active" data-lang="en">EN</button>
+          <button class="lang" data-lang="sw">SW</button>
+        </div>
+        <button class="logout">Logout</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="hero">
+        <h2 data-i18n="welcome.title">Welcome to ThinkShip ERP</h2>
+        <p data-i18n="welcome.subtitle">Use the menu to navigate accounting, budgeting and reports.</p>
+      </section>
+
+      <section class="info">
+        <p>Click a menu item to load its page (the page name will appear in the header).</p>
+      </section>
+    </main>
   </div>
 
   <script src="script.js"></script>
